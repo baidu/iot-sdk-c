@@ -384,7 +384,7 @@ static void OnMqttOperationComplete(MQTT_CLIENT_HANDLE handle, MQTT_CLIENT_EVENT
                         iotHubClient->isRecoverableError = false;
                     }
                     LogError("Connection Not Accepted: 0x%x: %s", connack->returnCode, RetrieveMqttReturnCodes(connack->returnCode));
-                    (void)mqtt_client_disconnect(iotHubClient->mqttClient);
+                    (void)mqtt_client_disconnect(iotHubClient->mqttClient, NULL, NULL);
                     iotHubClient->mqttClientStatus = MQTT_CLIENT_STATUS_NOT_CONNECTED;
                 }
             }
@@ -456,7 +456,7 @@ static void OnMqttOperationComplete(MQTT_CLIENT_HANDLE handle, MQTT_CLIENT_EVENT
         case MQTT_CLIENT_ON_PUBLISH_COMP:
         {
             // Done so send disconnect
-            mqtt_client_disconnect(handle);
+            mqtt_client_disconnect(handle, NULL, NULL);
             break;
         }
         case MQTT_CLIENT_ON_DISCONNECT:
@@ -814,7 +814,7 @@ static XIO_HANDLE CreateTlsConnection(const char *endpoint)
 
 static void DisconnectFromClient(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient)
 {
-    (void)mqtt_client_disconnect(iotHubClient->mqttClient);
+    (void)mqtt_client_disconnect(iotHubClient->mqttClient, NULL, NULL);
     xio_destroy(iotHubClient->xioTransport);
     iotHubClient->xioTransport = NULL;
 
@@ -1097,7 +1097,7 @@ void iothub_mqtt_dowork(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient)
 
 int iothub_mqtt_disconnect(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient)
 {
-    int result = mqtt_client_disconnect(iotHubClient->mqttClient);
+    int result = mqtt_client_disconnect(iotHubClient->mqttClient, NULL, NULL);
     iotHubClient->isDisconnectCalled = true;
     return result;
 }

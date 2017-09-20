@@ -161,7 +161,7 @@ static void OnOperationComplete(MQTT_CLIENT_HANDLE handle, MQTT_CLIENT_EVENT_RES
         case MQTT_CLIENT_ON_PUBLISH_COMP:
         {
             // Done so send disconnect
-            mqtt_client_disconnect(handle);
+            mqtt_client_disconnect(handle, NULL, NULL);
             break;
         }
         case MQTT_CLIENT_ON_DISCONNECT:
