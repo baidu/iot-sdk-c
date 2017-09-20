@@ -1,0 +1,10 @@
+[submodule "c-utility"]
+	path = c-utility
+	url = https://github.com/Azure/azure-c-shared-utility.git
+[submodule "parson"]
+	path = parson
+	url = https://github.com/kgabis/parson.git
+[submodule "umqtt"]
+	path = umqtt
+	url = https://github.com/Azure/azure-umqtt-c.git
+	branch = release_2017_09_08
