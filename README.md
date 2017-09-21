@@ -1,4 +1,4 @@
-## 百度云天工物联网平台 IoT Edge SDK for C##
+## 百度云天工物联网平台 IoT Edge SDK for C ##
 
 此代码库包含以下组件：
 
