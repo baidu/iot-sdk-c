@@ -171,6 +171,10 @@ static void OnOperationComplete(MQTT_CLIENT_HANDLE handle, MQTT_CLIENT_EVENT_RES
         {
             break;
         }
+        case MQTT_CLIENT_ON_PING_RESPONSE:
+        {
+            break;
+        }
         default:
         {
             (void)printf("unexpected value received for enumeration (%d)\n", (int)actionResult);

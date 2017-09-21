@@ -25,13 +25,13 @@
 
 // Please set the mqtt client data and security which are shown as follow.
 // The endpoint address, witch is like "xxxxxx.mqtt.iot.xx.baidubce.com".
-#define         ENDPOINT                    "xxxxxx.mqtt.iot.xx.baidubce.com"
+#define         ENDPOINT                    "huyun_perf.mqtt.iot.gz.baidubce.com"
 
 // The mqtt client username, and the format is like "xxxxxx/xxxx".
-#define         USERNAME                    "xxxxxx/xxxx"
+#define         USERNAME                    "huyun_perf/admin"
 
 // The key (password) of mqtt client.
-#define         PASSWORD                    "xxxxxx"
+#define         PASSWORD                    "PAYLijiHPjuRoQE4SeUBw346/q3DhUb2Ht0ogil1IsU="
 
 static const char* TOPIC_NAME_A = "msgA";
 static const char* TOPIC_NAME_B = "msgB";
