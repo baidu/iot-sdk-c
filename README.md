@@ -128,7 +128,8 @@ iothub_client_sample依赖openssl库的ssleay32和libeay32，在你使用他们�
 
 		git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2k
 
-就可以把openssl相关的源代码可以checkout出来
+	就可以把openssl相关的源代码可以checkout出来
+
 2. 更多关于支持的配置，需要安装什么library，以及编译步骤可以访问openSSL Installation和Compilation and Installation
 3. X86相关的配置，可以打开VS2015 x86 Native Tools Command Prompt的命令行，然后执行INSTALL.W32文件里面的命令
 4. X64相关的配置，可以打开VS2015 x64 Native Tools Command Prompt的命令行，然后执行INSTALL.W64文件里面的命令
