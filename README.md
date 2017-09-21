@@ -61,16 +61,6 @@
 ## 准备开发环境 ##
 
 这篇文章介绍如何准备开发环境来使用百度云天工的c语言版本的IoT Edge sDK。这里主要介绍如何配置windows和Linux下的开发环境。
-•	Set up a Windows development environment
-•	设置windows下面的开发环境
-•	Set up a Linux development environment
-•	设置linux下面的开发环境
-•	Set up a macOS (Mac OS X) development environment
-•	设置macOS下面的开发环境
-•	Set up a Windows Embedded Compact 2013 development environment
-•	设置windows嵌入式compact 2013的开发环境
-•	Sample applications
-•	样例程序
 
 
 ### 配置Windows的开发环境 ###
@@ -134,7 +124,11 @@ iothub_client_sample依赖openssl库的ssleay32和libeay32，在你使用他们�
 
 下面的步骤介绍如何编译和安装openssl的库，具体步骤编译openssl-1.0.2k,如下
 
-1. 访问[OpenSSL Github Repository]，同时执行命令：git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2k就可以把openssl相关的源代码可以checkout出来
+1. 访问[OpenSSL Github Repository]，同时执行命令：
+
+		git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2k
+
+就可以把openssl相关的源代码可以checkout出来
 2. 更多关于支持的配置，需要安装什么library，以及编译步骤可以访问openSSL Installation和Compilation and Installation
 3. X86相关的配置，可以打开VS2015 x86 Native Tools Command Prompt的命令行，然后执行INSTALL.W32文件里面的命令
 4. X64相关的配置，可以打开VS2015 x64 Native Tools Command Prompt的命令行，然后执行INSTALL.W64文件里面的命令
