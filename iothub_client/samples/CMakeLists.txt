@@ -35,3 +35,5 @@ endif()
 add_subdirectory(simple_pub_sample)
 
 add_subdirectory(iotdm_client_sample)
+
+add_subdirectory(bos_sample)

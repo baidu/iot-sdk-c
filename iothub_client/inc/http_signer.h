@@ -17,20 +17,27 @@
 * limitations under the License.
 */
 
-#ifndef CERTS_H
-#define CERTS_H
+#ifndef HTTP_SIGNER_H
+#define HTTP_SIGNER_H
 
 #ifdef __cplusplus
+#include <cstddef>
 extern "C"
 {
+#else
+#include <stddef.h>
+#include <azure_c_shared_utility/buffer_.h>
+#include <azure_c_shared_utility/httpheaders.h>
+#include <azure_c_shared_utility/httpapi.h>
+#include <azure_c_shared_utility/strings_types.h>
 #endif
 
-extern const char certificates[];
+#include "azure_c_shared_utility/umock_c_prod.h"
 
-extern const char bos_root_ca[];
+MOCKABLE_FUNCTION(, int, HTTPSigner_Sign, HTTP_HEADERS_HANDLE, requestHttpHeaders, HTTPAPI_REQUEST_TYPE, requestType, const char*, host, STRING_HANDLE, relativePath, const char *, ak, const char *, sk)
 
 #ifdef __cplusplus
 }
-#endif
+#endif // __cplusplus
 
-#endif /* CERTS_H */
+#endif // HTTP_SIGNER_H
