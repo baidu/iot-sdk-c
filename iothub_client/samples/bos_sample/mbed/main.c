@@ -17,20 +17,11 @@
 * limitations under the License.
 */
 
-#ifndef CERTS_H
-#define CERTS_H
 
-#ifdef __cplusplus
-extern "C"
+#include "bos_sample.h"
+
+int main(void)
 {
-#endif
-
-extern const char certificates[];
-
-extern const char bos_root_ca[];
-
-#ifdef __cplusplus
+    bos_run();
+    return 0;
 }
-#endif
-
-#endif /* CERTS_H */
