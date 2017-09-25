@@ -41,6 +41,7 @@ int bos_run_upload(void)
     unsigned int httpStatus;
     BUFFER_HANDLE response = BUFFER_new();
     BOS_RESULT result = BOS_Upload(BOS_SERVER, AK, SK, BOS_BUCKET, BOS_OBJECT_KEY, buffer, bufferSize, &httpStatus, response);
+    free(buffer);
 
     LogInfo("Upload finished. result = %d, httpStatus=%d.", result, httpStatus);
     if (!IS_SUCCESS_STATUS(httpStatus))

@@ -115,6 +115,7 @@ int HTTPSigner_Sign(HTTP_HEADERS_HANDLE requestHttpHeaders, HTTPAPI_REQUEST_TYPE
                         }
                     }
                 }
+                STRING_delete(canonicalUri);
             }
         }
     }
