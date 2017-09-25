@@ -42,6 +42,7 @@ int bos_run_upload(void)
     BUFFER_HANDLE response = BUFFER_new();
     BOS_RESULT result = BOS_Upload(BOS_SERVER, AK, SK, BOS_BUCKET, BOS_OBJECT_KEY, buffer, bufferSize, &httpStatus, response);
     free(buffer);
+    BUFFER_delete(response);
 
     LogInfo("Upload finished. result = %d, httpStatus=%d.", result, httpStatus);
     if (!IS_SUCCESS_STATUS(httpStatus))
@@ -49,8 +50,10 @@ int bos_run_upload(void)
         LogError("failure in BOS_Upload");
         return __FAILURE__;
     }
-    BUFFER_delete(response);
-    return 0;
+    else
+    {
+        return 0;
+    }
 }
 
 int bos_run_download(void)
@@ -58,6 +61,7 @@ int bos_run_download(void)
     unsigned int httpStatus;
     BUFFER_HANDLE response = BUFFER_new();
     BOS_RESULT result = BOS_Download(BOS_SERVER, AK, SK, BOS_BUCKET, BOS_OBJECT_KEY, &httpStatus, response);
+    BUFFER_delete(response);
 
     LogInfo("Download finished. result = %d, httpStatus=%d, content size=%d.", result, httpStatus, BUFFER_length(response));
     if (!IS_SUCCESS_STATUS(httpStatus))
@@ -65,8 +69,10 @@ int bos_run_download(void)
         LogError("failure in BOS_Download");
         return __FAILURE__;
     }
-    BUFFER_delete(response);
-    return 0;
+    else
+    {
+        return 0;
+    }
 }
 
 int bos_run(void)
