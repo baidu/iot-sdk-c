@@ -31,8 +31,16 @@ extern "C" {
 
 typedef enum SHADOW_CALLBACK_TYPE_TAG
 {
-    SHADOW_CALLBACK_TYPE_DELTA
+    SHADOW_CALLBACK_TYPE_DELTA,
+    SHADOW_CALLBACK_TYPE_GET_REJECTED,
+    SHADOW_CALLBACK_TYPE_UPDATE_REJECTED
 } SHADOW_CALLBACK_TYPE;
+
+typedef struct SHADOW_ERROR_TAG
+{
+    int code;
+    const char* message;
+} SHADOW_ERROR;
 
 typedef struct SHADOW_MESSAGE_CONTEXT_TAG
 {
@@ -41,6 +49,7 @@ typedef struct SHADOW_MESSAGE_CONTEXT_TAG
 } SHADOW_MESSAGE_CONTEXT;
 
 typedef void (*SHADOW_DELTA_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON_Object* desired, void* callbackContext);
+typedef void (*SHADOW_ERROR_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext);
 
 #ifdef __cplusplus
 }
