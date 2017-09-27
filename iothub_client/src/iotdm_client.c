@@ -21,21 +21,27 @@
 #include "iotdm_client.h"
 #include "iothub_mqtt_client.h"
 
-#define     SUB_TOPIC_SIZE                  1
+#define     SUB_TOPIC_SIZE                  3
 
 #define     SLASH                           '/'
 
 #define     TOPIC_PREFIX                    "$baidu/iot/shadow/"
 
 #define     TOPIC_SUFFIX_DELTA              "delta"
+#define     TOPIC_SUFFIX_GET_REJECTED       "get/rejected"
+#define     TOPIC_SUFFIX_UPDATE_REJECTED    "update/rejected"
 
 #define     PUB_GET                         "$baidu/iot/shadow/%s/get"
 #define     PUB_UPDATE                      "$baidu/iot/shadow/%s/update"
 
 #define     SUB_DELTA                       "$baidu/iot/shadow/%s/delta"
+#define     SUB_GET_REJECTED                "$baidu/iot/shadow/%s/get/rejected"
+#define     SUB_UPDATE_REJECTED             "$baidu/iot/shadow/%s/update/rejected"
 
+#define     KEY_CODE                        "code"
 #define     KEY_DESIRED                     "desired"
 #define     KEY_LASTUPDATEDTIME             "lastUpdatedTime"
+#define     KEY_MESSAGE                     "message"
 #define     KEY_REPORTED                    "reported"
 #define     KEY_REQUEST_ID                  "requestId"
 #define     KEY_VERSION                     "profileVersion"
@@ -43,11 +49,15 @@
 typedef struct SHADOW_CALLBACK_TAG
 {
     SHADOW_DELTA_CALLBACK delta;
+    SHADOW_ERROR_CALLBACK getRejected;
+    SHADOW_ERROR_CALLBACK updateRejected;
 } SHADOW_CALLBACK;
 
 typedef struct SHADOW_CALLBACK_CONTEXT_TAG
 {
     void* delta;
+    void* getRejected;
+    void* updateRejected;
 } SHADOW_CALLBACK_CONTEXT;
 
 typedef struct IOTDM_CLIENT_TAG
@@ -194,6 +204,14 @@ static char* GetDeviceFromTopic(const char* topic, SHADOW_CALLBACK_TYPE* type)
     {
         *type = SHADOW_CALLBACK_TYPE_DELTA;
     }
+    else if (true == StringCmp(TOPIC_SUFFIX_GET_REJECTED, topic, end + 1, StringLength(topic) + 1))
+    {
+        *type = SHADOW_CALLBACK_TYPE_GET_REJECTED;
+    }
+    else if (true == StringCmp(TOPIC_SUFFIX_UPDATE_REJECTED, topic, end + 1, StringLength(topic) + 1))
+    {
+        *type = SHADOW_CALLBACK_TYPE_UPDATE_REJECTED;
+    }
     else
     {
         LogError("Failure: the subscribe handle is not supported.");
@@ -245,7 +263,27 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
         subscribe[index] = GenerateTopic(SUB_DELTA, handle->name);
         if (NULL == subscribe[index++])
         {
-            LogError("Feailure: failed to generate the sub topic.");
+            LogError("Feailure: failed to generate the sub topic 'delta'.");
+            ReleaseSubscription(subscribe, length);
+            return -1;
+        }
+    }
+    if (NULL != handle->callback.getRejected)
+    {
+        subscribe[index] = GenerateTopic(SUB_GET_REJECTED, handle->name);
+        if (NULL == subscribe[index++])
+        {
+            LogError("Feailure: failed to generate the sub topic 'get/rejected'.");
+            ReleaseSubscription(subscribe, length);
+            return -1;
+        }
+    }
+    if (NULL != handle->callback.updateRejected)
+    {
+        subscribe[index] = GenerateTopic(SUB_UPDATE_REJECTED, handle->name);
+        if (NULL == subscribe[index++])
+        {
+            LogError("Feailure: failed to generate the sub topic 'update/rejected'.");
             ReleaseSubscription(subscribe, length);
             return -1;
         }
@@ -264,6 +302,15 @@ static void OnRecvCallbackForDelta(const IOTDM_CLIENT_HANDLE handle, const SHADO
     }
 
     (*(handle->callback.delta))(msgContext, desired, handle->context.delta);
+}
+
+static void OnRecvCallbackForError(const SHADOW_MESSAGE_CONTEXT* msgContext, const JSON_Object* root, const SHADOW_ERROR_CALLBACK callback, void* callbackContext)
+{
+    SHADOW_ERROR error;
+    error.code = (int)json_object_get_number(root, KEY_CODE);
+    error.message = json_object_get_string(root, KEY_MESSAGE);
+
+    (*callback)(msgContext, &error, callbackContext);
 }
 
 static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
@@ -309,6 +356,14 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
                 OnRecvCallbackForDelta(handle, &msgContext, root);
                 break;
 
+            case SHADOW_CALLBACK_TYPE_GET_REJECTED:
+                OnRecvCallbackForError(&msgContext, root, handle->callback.getRejected, handle->context.getRejected);
+                break;
+
+            case SHADOW_CALLBACK_TYPE_UPDATE_REJECTED:
+                OnRecvCallbackForError(&msgContext, root, handle->callback.updateRejected, handle->context.updateRejected);
+                break;
+
             default:
                 LogError("Failure: the shadow callback type is not supported.");
         }
@@ -350,8 +405,12 @@ static void ResetIotDmClient(IOTDM_CLIENT_HANDLE handle)
         handle->mqttClient = NULL;
 
         handle->callback.delta = NULL;
+        handle->callback.getRejected = NULL;
+        handle->callback.updateRejected = NULL;
 
         handle->context.delta = NULL;
+        handle->context.getRejected = NULL;
+        handle->context.updateRejected = NULL;
     }
 }
 
@@ -583,6 +642,18 @@ void iotdm_client_register_delta(IOTDM_CLIENT_HANDLE handle, SHADOW_DELTA_CALLBA
 {
     handle->callback.delta = callback;
     handle->context.delta = callbackContext;
+}
+
+void iotdm_client_register_get_rejected(IOTDM_CLIENT_HANDLE handle, SHADOW_ERROR_CALLBACK callback, void* callbackContext)
+{
+    handle->callback.getRejected = callback;
+    handle->context.getRejected = callbackContext;
+}
+
+void iotdm_client_register_update_rejected(IOTDM_CLIENT_HANDLE handle, SHADOW_ERROR_CALLBACK callback, void* callbackContext)
+{
+    handle->callback.updateRejected = callback;
+    handle->context.updateRejected = callbackContext;
 }
 
 int iotdm_client_get_shadow(const IOTDM_CLIENT_HANDLE handle, const char* device, const char* requestId)

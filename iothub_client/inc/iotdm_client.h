@@ -36,7 +36,7 @@ typedef struct IOTDM_CLIENT_TAG* IOTDM_CLIENT_HANDLE;
 
 typedef struct IOTDM_CLIENT_OPTIONS_TAG
 {
-    // Indicate whether receiving deliveried messaged when reconnection.
+    // Indicate whether receiving deliveried message when reconnection.
     bool cleanSession;
 
     char* clientId;
@@ -57,6 +57,8 @@ MOCKABLE_FUNCTION(, void, iotdm_client_deinit, IOTDM_CLIENT_HANDLE, handle);
 MOCKABLE_FUNCTION(, int, iotdm_client_connect, IOTDM_CLIENT_HANDLE, handle, const IOTDM_CLIENT_OPTIONS*, options);
 
 MOCKABLE_FUNCTION(, void, iotdm_client_register_delta, IOTDM_CLIENT_HANDLE, handle, SHADOW_DELTA_CALLBACK, callback, void*, callbackContext);
+MOCKABLE_FUNCTION(, void, iotdm_client_register_get_rejected, IOTDM_CLIENT_HANDLE, handle, SHADOW_ERROR_CALLBACK, callback, void*, callbackContext);
+MOCKABLE_FUNCTION(, void, iotdm_client_register_update_rejected, IOTDM_CLIENT_HANDLE, handle, SHADOW_ERROR_CALLBACK, callback, void*, callbackContext);
 
 MOCKABLE_FUNCTION(, int, iotdm_client_get_shadow, const IOTDM_CLIENT_HANDLE, handle, const char*, device, const char*, requestId);
 MOCKABLE_FUNCTION(, int, iotdm_client_update_desired, const IOTDM_CLIENT_HANDLE, handle, const char*, device, const char*, requestId, uint32_t, version, JSON_Value*, desired, JSON_Value*, lastUpdatedTime);

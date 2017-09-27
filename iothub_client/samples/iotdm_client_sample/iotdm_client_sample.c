@@ -67,9 +67,34 @@ static void Log(const char* message)
     printf("%s\r\n", message);
 }
 
+static void LogCode(const int code)
+{
+    printf("%d\r\n", code);
+}
+
+static void HandleUpdateRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext)
+{
+    Log("Received a message for shadow update rejected.");
+    Log("Request ID:");
+    Log(messageContext->requestId);
+    Log("Device:");
+    Log(messageContext->device);
+    Log("Code:");
+    LogCode(error->code);
+    Log("Message:");
+    Log(error->message);
+
+    if (NULL == callbackContext)
+    {
+        LogError("Failure: the callback context is NULL.");
+    }
+
+    Log(SPLIT);
+}
+
 static void HandleDelta(const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON_Object* desired, void* callbackContext)
 {
-    Log("Recived a message for shadow delta");
+    Log("Received a message for shadow delta");
     Log("Request ID:");
     Log(messageContext->requestId);
     Log("Device:");
@@ -127,6 +152,7 @@ int iotdm_client_run(void)
     }
 
     iotdm_client_register_delta(handle, HandleDelta, handle);
+    iotdm_client_register_update_rejected(handle, HandleUpdateRejected, handle);
 
     IOTDM_CLIENT_OPTIONS options;
     options.cleanSession = true;
@@ -142,6 +168,9 @@ int iotdm_client_run(void)
         Log("iotdm_client_connect failed");
         return __FAILURE__;
     }
+
+    // Subscribe the topics.
+    iotdm_client_dowork(handle);
 
     // Sample: use 'serializer' to encode device model to binary and update the device shadow.
     BaiduSamplePump* pump = CREATE_MODEL_INSTANCE(BaiduIotDeviceSample, BaiduSamplePump);
@@ -176,7 +205,17 @@ int iotdm_client_run(void)
         }
         else
         {
-            Log("Failed to updlate device shadow with bianry");
+            Log("Failed to update device shadow with bianry");
+        }
+
+        // Sample: update shadow with incorrect version, and receive error message at 'update/rejected'.
+        if (0 == iotdm_client_update_shadow_with_binary(handle, DEVICE, "111111", 1, reportedString, NULL))
+        {
+            Log("Succeeded to send message for updating device shadow with bianry");
+        }
+        else
+        {
+            Log("Failed to send message for updating device shadow with bianry");
         }
 
         free(reportedString);
