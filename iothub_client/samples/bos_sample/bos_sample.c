@@ -28,6 +28,8 @@
 
 #define         BOS_BUCKET                      "xxx"
 
+// Key of BOS object. Like 'folder1/folder2/my-file.txt' or 'my-file.txt'. Please note folder should be included in object's key.
+// For BOS core concepts please refer to https://cloud.baidu.com/doc/BOS/ProductDescription.html#.E6.A0.B8.E5.BF.83.E6.A6.82.E5.BF.B5
 #define         BOS_OBJECT_KEY                  "xxx"
 
 #define         AK                              "xxx"
