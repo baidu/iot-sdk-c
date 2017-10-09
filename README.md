@@ -155,6 +155,9 @@ iothub_client_sample依赖openssl库的ssleay32和libeay32，在你使用他们�
 
 这一节会介绍如何设置C SDK在ubuntu下面的开发环境。可以使用CMake来创建makefiles，执行命令make调用gcc来将他们编译成为C语言版本的SDK
 
+- 安装IDE开发工具，你可以下载Clion工具，链接地址：https://www.jetbrains.com/clion/
+			直接导入现有项目，不要覆盖Cmake项目
+
 - 在编译SDK之前确认所有的依赖库都已经安装好，例如ubuntu平台，你可以执行apt-get这个命令区安装对应的安装包
 
 			sudo apt-get update sudo apt-get install -y git cmake build-essential curl libcurl4-openssl-dev libssl-dev uuid-dev 
@@ -205,6 +208,8 @@ iothub_client_sample依赖openssl库的ssleay32和libeay32，在你使用他们�
 ### 设置macOS的开发环境 ###
 
 这一节介绍如何设置C语言SDK在macOS上的开发环境。CMake可以生成makefiles，make使用makefiles可以将他们编译成为c语言SDK利用clang，clang默认会包含在XCode里面，我们已经测试过c语言版本的SDK在Sierra上，对应XCode版本是8.
+- 安装IDE开发工具，你可以下载Clion工具，链接地址：https://www.jetbrains.com/clion/
+                        直接导入现有项目，不要覆盖Cmake项目
 
 - 在编译SDK之前，确保所有的dependencies都安装好。对于macOS系统，你可以使用Homebrew来安装正确的packages
 		brew update brew install git cmake pkgconfig openssl ossp-uuid 
