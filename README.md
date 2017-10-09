@@ -151,7 +151,8 @@ iothub_client_sample依赖openssl库的ssleay32和libeay32，在你使用他们�
 这个命令会编译C SDK，同时也会编译iothub_client_sample的样例
 
 
-###设置Linux开发环境###
+### 设置Linux开发环境 ###
+
 这一节会介绍如何设置C SDK在ubuntu下面的开发环境。可以使用CMake来创建makefiles，执行命令make调用gcc来将他们编译成为C语言版本的SDK
 
 - 在编译SDK之前确认所有的依赖库都已经安装好，例如ubuntu平台，你可以执行apt-get这个命令区安装对应的安装包
