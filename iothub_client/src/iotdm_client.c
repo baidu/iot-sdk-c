@@ -606,7 +606,7 @@ int iotdm_client_dowork(const IOTDM_CLIENT_HANDLE handle)
     }
 
     handle->subscribed = !(handle->mqttClient->isConnectionLost) && handle->subscribed;
-    if (MQTT_CLIENT_STATUS_CONNECTED && !(handle->subscribed))
+    if (handle->mqttClient->mqttClientStatus == MQTT_CLIENT_STATUS_CONNECTED && !(handle->subscribed))
     {
         char* topics[SUB_TOPIC_SIZE];
         int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE);
