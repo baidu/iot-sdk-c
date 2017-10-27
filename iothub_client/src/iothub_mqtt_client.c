@@ -72,7 +72,7 @@ static int RetryPolicy_Exponential_BackOff_With_Jitter(bool *permit, size_t* del
             2. delay with jitter = delay + rand_between(0, delay/2)
         */
 
-        size_t halfDelta = ((1 << numOfFailures) - 1) / 4;
+        size_t halfDelta = ((1 << (size_t)numOfFailures) - 1) / 4;
         if (halfDelta > 0)
         {
             *delay = halfDelta + (rand() % (int)halfDelta);
@@ -732,10 +732,17 @@ static void InitMqttOptions(MQTT_CLIENT_OPTIONS* mqttOptions)
 
 static int CloneMqttOptions(MQTT_CLIENT_OPTIONS** newMqttOptions, const MQTT_CLIENT_OPTIONS* mqttOptions)
 {
+    int result = 0;
     *newMqttOptions = (MQTT_CLIENT_OPTIONS *)malloc(sizeof(MQTT_CLIENT_OPTIONS));
+    if (*newMqttOptions == NULL) {
+        LOG(AZ_LOG_ERROR, LOG_LINE, "malloc MQTT_CLIENT_OPTIONS failed");
+        result = __FAILURE__;
+
+        return result;
+    }
+
     InitMqttOptions(*newMqttOptions);
 
-    int result = 0;
     if (mqttOptions->clientId != NULL)
     {
         if (mallocAndStrcpy_s(&((*newMqttOptions)->clientId), mqttOptions->clientId) != 0)
@@ -868,6 +875,11 @@ IOTHUB_MQTT_CLIENT_HANDLE initialize_mqtt_client_handle(const MQTT_CLIENT_OPTION
                                                         IOTHUB_CLIENT_RETRY_POLICY retryPolicy, size_t retryTimeoutLimitInSeconds)
 {
     IOTHUB_MQTT_CLIENT_HANDLE iotHubClient = (IOTHUB_MQTT_CLIENT_HANDLE)malloc(sizeof(IOTHUB_MQTT_CLIENT));
+
+    if (iotHubClient == NULL) {
+        LOG(AZ_LOG_ERROR, LOG_LINE, "malloc IOTHUB_MQTT_CLIENT failed");
+        return NULL;
+    }
 
     memset(iotHubClient, 0, sizeof(IOTHUB_MQTT_CLIENT));
 
