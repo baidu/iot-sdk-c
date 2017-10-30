@@ -298,7 +298,10 @@ void mqtt_client_sample_run()
                         mqtt_client_dowork(mqttHandle);
                     } while (g_continue);
                 }
-                xio_close(xio, OnCloseComplete, NULL);
+                if (xio_close(xio, OnCloseComplete, NULL) != 0)
+                {
+                    (void)printf("xio_close failed\r\n");
+                }
             }
             mqtt_client_deinit(mqttHandle);
         }
