@@ -102,27 +102,27 @@ static RETRY_LOGIC* CreateRetryLogic(IOTHUB_CLIENT_RETRY_POLICY retryPolicy, siz
         switch (retryLogic->retryPolicy)
         {
             case IOTHUB_CLIENT_RETRY_NONE:
-                LogError("Not implemented chosing default");
+                // LogError("Not implemented chosing default");
                 retryLogic->fnRetryPolicy = &RetryPolicy_Exponential_BackOff_With_Jitter;
                 break;
             case IOTHUB_CLIENT_RETRY_IMMEDIATE:
-                LogError("Not implemented chosing default");
+                // LogError("Not implemented chosing default");
                 retryLogic->fnRetryPolicy = &RetryPolicy_Exponential_BackOff_With_Jitter;
                 break;
             case IOTHUB_CLIENT_RETRY_INTERVAL:
-                LogError("Not implemented chosing default");
+                // LogError("Not implemented chosing default");
                 retryLogic->fnRetryPolicy = &RetryPolicy_Exponential_BackOff_With_Jitter;
                 break;
             case IOTHUB_CLIENT_RETRY_LINEAR_BACKOFF:
-                LogError("Not implemented chosing default");
+                // LogError("Not implemented chosing default");
                 retryLogic->fnRetryPolicy = &RetryPolicy_Exponential_BackOff_With_Jitter;
                 break;
             case IOTHUB_CLIENT_RETRY_EXPONENTIAL_BACKOFF:
-                LogError("Not implemented chosing default");
+                // LogError("Not implemented chosing default");
                 retryLogic->fnRetryPolicy = &RetryPolicy_Exponential_BackOff_With_Jitter;
                 break;
             case IOTHUB_CLIENT_RETRY_RANDOM:
-                LogError("Not implemented chosing default");
+                // LogError("Not implemented chosing default");
                 retryLogic->fnRetryPolicy = &RetryPolicy_Exponential_BackOff_With_Jitter;
                 break;
             case IOTHUB_CLIENT_RETRY_EXPONENTIAL_BACKOFF_WITH_JITTER:
