@@ -84,14 +84,14 @@ int HTTPSigner_Sign(HTTP_HEADERS_HANDLE requestHttpHeaders, HTTPAPI_REQUEST_TYPE
                     }
                     else
                     {
-                        signingKey = HMACSHA256_ComputeHashHex(sk, strlen(sk), (const unsigned char *) STRING_c_str(authStringPrefix), STRING_length(authStringPrefix));
+                        signingKey = HMACSHA256_ComputeHashHex((const unsigned char *)sk, strlen(sk), (const unsigned char *) STRING_c_str(authStringPrefix), STRING_length(authStringPrefix));
                         if (NULL == signingKey)
                         {
                             LogError("failure in HMACSHA256_ComputeHashHex");
                         }
                         else
                         {
-                            signature = HMACSHA256_ComputeHashHex((const unsigned char *) STRING_c_str(signingKey), STRING_length(signingKey), STRING_c_str(canonicalRequest), STRING_length(canonicalRequest));
+                            signature = HMACSHA256_ComputeHashHex((const unsigned char *) STRING_c_str(signingKey), STRING_length(signingKey), (const unsigned char *)STRING_c_str(canonicalRequest), STRING_length(canonicalRequest));
                             if (NULL == signature)
                             {
                                 LogError("failure in HMACSHA256_ComputeHashHex");
