@@ -271,7 +271,7 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
         subscribe[index] = GenerateTopic(SUB_DELTA, handle->name);
         if (NULL == subscribe[index++])
         {
-            LogError("Feilure: failed to generate the sub topic 'delta'.");
+            LogError("Failure: failed to generate the sub topic 'delta'.");
             ReleaseSubscription(subscribe, length);
             return -1;
         }
@@ -281,7 +281,17 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
         subscribe[index] = GenerateTopic(SUB_GET_REJECTED, handle->name);
         if (NULL == subscribe[index++])
         {
-            LogError("Feailure: failed to generate the sub topic 'get/rejected'.");
+            LogError("Failure: failed to generate the sub topic 'get/rejected'.");
+            ReleaseSubscription(subscribe, length);
+            return -1;
+        }
+    }
+    if (NULL != handle->callback.updateAccepted)
+    {
+        subscribe[index] = GenerateTopic(SUB_UPDATE_ACCEPTED, handle->name);
+        if (NULL == subscribe[index++])
+        {
+            LogError("Failure: failed to generate the sub topic 'update/accepted'.");
             ReleaseSubscription(subscribe, length);
             return -1;
         }
