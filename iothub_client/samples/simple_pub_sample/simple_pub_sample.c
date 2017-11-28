@@ -20,6 +20,7 @@
 #include <azure_c_shared_utility/platform.h>
 #include <azure_c_shared_utility/utf8_checker.h>
 #include <azure_c_shared_utility/threadapi.h>
+#include <azure_c_shared_utility/socketio.h>
 #include "iothub_mqtt_client.h"
 #include "simple_pub_sample.h"
 

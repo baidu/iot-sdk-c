@@ -67,9 +67,19 @@ static void Log(const char* message)
     printf("%s\r\n", message);
 }
 
+static void Log4Int(const int value)
+{
+    printf("%d\r\n", value);
+}
+
 static void LogCode(const int code)
 {
-    printf("%d\r\n", code);
+    Log4Int(code);
+}
+
+static void LogVersion(const int version)
+{
+    Log4Int(version);
 }
 
 static void HandleUpdateRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext)
@@ -83,6 +93,41 @@ static void HandleUpdateRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, c
     LogCode(error->code);
     Log("Message:");
     Log(error->message);
+
+    if (NULL == callbackContext)
+    {
+        LogError("Failure: the callback context is NULL.");
+    }
+
+    Log(SPLIT);
+}
+
+static void HandleUpdateAccepted(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext)
+{
+    Log("Received a message for shadow update accepted.");
+    Log("Request ID:");
+    Log(messageContext->requestId);
+    Log("Device:");
+    Log(messageContext->device);
+
+    Log("ProfileVersion:");
+    LogVersion(accepted->profileVersion);
+
+    JSON_Value* value = json_object_get_wrapping_value(accepted->reported);
+    char* encoded = json_serialize_to_string(value);
+    Log("Reported:");
+    Log(encoded);
+
+    value = json_object_get_wrapping_value(accepted->desired);
+    encoded = json_serialize_to_string(value);
+    Log("Desired:");
+    Log(encoded);
+
+    value = json_object_get_wrapping_value(accepted->lastUpdateTime);
+    encoded = json_serialize_to_string(value);
+    Log("LastUpdateTime:");
+    Log(encoded);
+    json_free_serialized_string(encoded);
 
     if (NULL == callbackContext)
     {
@@ -112,7 +157,7 @@ static void HandleDelta(const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON
     }
 
     // In the actual implementation, we should adjust the device status to match the control of device.
-    // However, here we only sleep, and then update the device shadow (status in reproted payload).
+    // However, here we only sleep, and then update the device shadow (status in reported payload).
 
     ThreadAPI_Sleep(10);
     IOTDM_CLIENT_HANDLE handle = (IOTDM_CLIENT_HANDLE)callbackContext;
@@ -152,6 +197,7 @@ int iotdm_client_run(void)
     }
 
     iotdm_client_register_delta(handle, HandleDelta, handle);
+    iotdm_client_register_update_accepted(handle, HandleUpdateAccepted, handle);
     iotdm_client_register_update_rejected(handle, HandleUpdateRejected, handle);
 
     IOTDM_CLIENT_OPTIONS options;
@@ -201,21 +247,21 @@ int iotdm_client_run(void)
 
         if (0 == iotdm_client_update_shadow_with_binary(handle, DEVICE, "123456", 0, reportedString, NULL))
         {
-            Log("Succeeded to update device shadow with bianry");
+            Log("Succeeded to update device shadow with binary");
         }
         else
         {
-            Log("Failed to update device shadow with bianry");
+            Log("Failed to update device shadow with binary");
         }
 
         // Sample: update shadow with incorrect version, and receive error message at 'update/rejected'.
         if (0 == iotdm_client_update_shadow_with_binary(handle, DEVICE, "111111", 1, reportedString, NULL))
         {
-            Log("Succeeded to send message for updating device shadow with bianry");
+            Log("Succeeded to send message for updating device shadow with binary");
         }
         else
         {
-            Log("Failed to send message for updating device shadow with bianry");
+            Log("Failed to send message for updating device shadow with binary");
         }
 
         free(reportedString);

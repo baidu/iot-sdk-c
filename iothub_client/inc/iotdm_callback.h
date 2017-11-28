@@ -33,6 +33,7 @@ typedef enum SHADOW_CALLBACK_TYPE_TAG
 {
     SHADOW_CALLBACK_TYPE_DELTA,
     SHADOW_CALLBACK_TYPE_GET_REJECTED,
+    SHADOW_CALLBACK_TYPE_UPDATE_ACCEPTED,
     SHADOW_CALLBACK_TYPE_UPDATE_REJECTED
 } SHADOW_CALLBACK_TYPE;
 
@@ -48,8 +49,17 @@ typedef struct SHADOW_MESSAGE_CONTEXT_TAG
     char* device;
 } SHADOW_MESSAGE_CONTEXT;
 
+typedef struct SHADOW_ACCEPTED_TAG
+{
+    int profileVersion;
+    const JSON_Object* reported;
+    const JSON_Object* desired;
+    const JSON_Object* lastUpdateTime;
+} SHADOW_ACCEPTED;
+
 typedef void (*SHADOW_DELTA_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON_Object* desired, void* callbackContext);
 typedef void (*SHADOW_ERROR_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext);
+typedef void (*SHADOW_ACCEPTED_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext);
 
 #ifdef __cplusplus
 }
