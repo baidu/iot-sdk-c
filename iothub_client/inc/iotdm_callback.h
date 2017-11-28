@@ -32,9 +32,12 @@ extern "C" {
 typedef enum SHADOW_CALLBACK_TYPE_TAG
 {
     SHADOW_CALLBACK_TYPE_DELTA,
+    SHADOW_CALLBACK_TYPE_GET_ACCEPTED,
     SHADOW_CALLBACK_TYPE_GET_REJECTED,
     SHADOW_CALLBACK_TYPE_UPDATE_ACCEPTED,
-    SHADOW_CALLBACK_TYPE_UPDATE_REJECTED
+    SHADOW_CALLBACK_TYPE_UPDATE_REJECTED,
+    SHADOW_CALLBACK_TYPE_UPDATE_DOCUMENTS,
+    SHADOW_CALLBACK_TYPE_UPDATE_SNAPSHOT
 } SHADOW_CALLBACK_TYPE;
 
 typedef struct SHADOW_ERROR_TAG
@@ -57,9 +60,25 @@ typedef struct SHADOW_ACCEPTED_TAG
     const JSON_Object* lastUpdateTime;
 } SHADOW_ACCEPTED;
 
+typedef struct SHADOW_DOCUMENTS_TAG
+{
+    int profileVersion;
+    const JSON_Object* current;
+    const JSON_Object* previous;
+} SHADOW_DOCUMENTS;
+
+typedef struct SHADOW_SNAPSHOT_TAG
+{
+    int profileVersion;
+    const JSON_Object* reported;
+    const JSON_Object* lastUpdateTime;
+} SHADOW_SNAPSHOT;
+
 typedef void (*SHADOW_DELTA_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON_Object* desired, void* callbackContext);
 typedef void (*SHADOW_ERROR_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext);
 typedef void (*SHADOW_ACCEPTED_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext);
+typedef void (*SHADOW_DOCUMENTS_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_DOCUMENTS* documents, void* callbackContext);
+typedef void (*SHADOW_SNAPSHOT_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_SNAPSHOT* snapshot, void* callbackContext);
 
 #ifdef __cplusplus
 }

@@ -82,6 +82,46 @@ static void LogVersion(const int version)
     Log4Int(version);
 }
 
+static void LogAcceptedMessage(const SHADOW_ACCEPTED* accepted)
+{
+    Log("ProfileVersion:");
+    LogVersion(accepted->profileVersion);
+
+    JSON_Value* value = json_object_get_wrapping_value(accepted->reported);
+    char* encoded = json_serialize_to_string(value);
+    Log("Reported:");
+    Log(encoded);
+
+    value = json_object_get_wrapping_value(accepted->desired);
+    encoded = json_serialize_to_string(value);
+    Log("Desired:");
+    Log(encoded);
+
+    value = json_object_get_wrapping_value(accepted->lastUpdateTime);
+    encoded = json_serialize_to_string(value);
+    Log("LastUpdateTime:");
+    Log(encoded);
+    json_free_serialized_string(encoded);
+}
+
+static void HandleGetAccepted(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext)
+{
+    Log("Received a message for shadow get accepted.");
+    Log("Request ID:");
+    Log(messageContext->requestId);
+    Log("Device:");
+    Log(messageContext->device);
+
+    LogAcceptedMessage(accepted);
+
+    if (NULL == callbackContext)
+    {
+        LogError("Failure: the callback context is NULL.");
+    }
+
+    Log(SPLIT);
+}
+
 static void HandleUpdateRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext)
 {
     Log("Received a message for shadow update rejected.");
@@ -110,20 +150,63 @@ static void HandleUpdateAccepted(const SHADOW_MESSAGE_CONTEXT* messageContext, c
     Log("Device:");
     Log(messageContext->device);
 
-    Log("ProfileVersion:");
-    LogVersion(accepted->profileVersion);
+    LogAcceptedMessage(accepted);
 
-    JSON_Value* value = json_object_get_wrapping_value(accepted->reported);
+    if (NULL == callbackContext)
+    {
+        LogError("Failure: the callback context is NULL.");
+    }
+
+    Log(SPLIT);
+}
+
+static void HandleUpdateDocuments(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_DOCUMENTS* documents, void* callbackContext)
+{
+    Log("Received a message for shadow update documents.");
+    Log("Request ID:");
+    Log(messageContext->requestId);
+    Log("Device:");
+    Log(messageContext->device);
+
+    Log("ProfileVersion:");
+    LogVersion(documents->profileVersion);
+
+    JSON_Value* value = json_object_get_wrapping_value(documents->current);
+    char* encoded = json_serialize_to_string(value);
+    Log("Current:");
+    Log(encoded);
+
+    value = json_object_get_wrapping_value(documents->previous);
+    encoded = json_serialize_to_string(value);
+    Log("Previous:");
+    Log(encoded);
+    json_free_serialized_string(encoded);
+
+    if (NULL == callbackContext)
+    {
+        LogError("Failure: the callback context is NULL.");
+    }
+
+    Log(SPLIT);
+}
+
+static void HandleUpdateSnapshot(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_SNAPSHOT* snapshot, void* callbackContext)
+{
+    Log("Received a message for shadow update snapshot.");
+    Log("Request ID:");
+    Log(messageContext->requestId);
+    Log("Device:");
+    Log(messageContext->device);
+
+    Log("ProfileVersion:");
+    LogVersion(snapshot->profileVersion);
+
+    JSON_Value* value = json_object_get_wrapping_value(snapshot->reported);
     char* encoded = json_serialize_to_string(value);
     Log("Reported:");
     Log(encoded);
 
-    value = json_object_get_wrapping_value(accepted->desired);
-    encoded = json_serialize_to_string(value);
-    Log("Desired:");
-    Log(encoded);
-
-    value = json_object_get_wrapping_value(accepted->lastUpdateTime);
+    value = json_object_get_wrapping_value(snapshot->lastUpdateTime);
     encoded = json_serialize_to_string(value);
     Log("LastUpdateTime:");
     Log(encoded);
@@ -197,8 +280,11 @@ int iotdm_client_run(void)
     }
 
     iotdm_client_register_delta(handle, HandleDelta, handle);
+    iotdm_client_register_get_accepted(handle, HandleGetAccepted, handle);
     iotdm_client_register_update_accepted(handle, HandleUpdateAccepted, handle);
     iotdm_client_register_update_rejected(handle, HandleUpdateRejected, handle);
+    iotdm_client_register_update_documents(handle, HandleUpdateDocuments, handle);
+    iotdm_client_register_update_snapshot(handle, HandleUpdateSnapshot, handle);
 
     IOTDM_CLIENT_OPTIONS options;
     options.cleanSession = true;
@@ -217,6 +303,16 @@ int iotdm_client_run(void)
 
     // Subscribe the topics.
     iotdm_client_dowork(handle);
+
+    // Sample: get device shadow
+    if (0 == iotdm_client_get_shadow(handle, DEVICE, "123456789"))
+    {
+        Log("Succeeded to get device shadow");
+    }
+    else
+    {
+        Log("Failed to get device shadow");
+    }
 
     // Sample: use 'serializer' to encode device model to binary and update the device shadow.
     BaiduSamplePump* pump = CREATE_MODEL_INSTANCE(BaiduIotDeviceSample, BaiduSamplePump);
