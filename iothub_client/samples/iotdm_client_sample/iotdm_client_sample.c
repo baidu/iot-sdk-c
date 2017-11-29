@@ -104,9 +104,8 @@ static void LogAcceptedMessage(const SHADOW_ACCEPTED* accepted)
     json_free_serialized_string(encoded);
 }
 
-static void HandleGetAccepted(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext)
+static void HandleAccepted(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext)
 {
-    Log("Received a message for shadow get accepted.");
     Log("Request ID:");
     Log(messageContext->requestId);
     Log("Device:");
@@ -118,13 +117,10 @@ static void HandleGetAccepted(const SHADOW_MESSAGE_CONTEXT* messageContext, cons
     {
         LogError("Failure: the callback context is NULL.");
     }
-
-    Log(SPLIT);
 }
 
-static void HandleUpdateRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext)
+static void HandleRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext)
 {
-    Log("Received a message for shadow update rejected.");
     Log("Request ID:");
     Log(messageContext->requestId);
     Log("Device:");
@@ -138,6 +134,28 @@ static void HandleUpdateRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, c
     {
         LogError("Failure: the callback context is NULL.");
     }
+}
+
+static void HandleGetAccepted(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext)
+{
+    Log("Received a message for shadow get accepted.");
+    HandleAccepted(messageContext, accepted, callbackContext);
+
+    Log(SPLIT);
+}
+
+static void HandleGetRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext)
+{
+    Log("Received a message for shadow get rejected.");
+    HandleRejected(messageContext, error, callbackContext);
+
+    Log(SPLIT);
+}
+
+static void HandleUpdateRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext)
+{
+    Log("Received a message for shadow update rejected.");
+    HandleRejected(messageContext, error, callbackContext);
 
     Log(SPLIT);
 }
@@ -145,17 +163,7 @@ static void HandleUpdateRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, c
 static void HandleUpdateAccepted(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext)
 {
     Log("Received a message for shadow update accepted.");
-    Log("Request ID:");
-    Log(messageContext->requestId);
-    Log("Device:");
-    Log(messageContext->device);
-
-    LogAcceptedMessage(accepted);
-
-    if (NULL == callbackContext)
-    {
-        LogError("Failure: the callback context is NULL.");
-    }
+    HandleAccepted(messageContext, accepted, callbackContext);
 
     Log(SPLIT);
 }
@@ -220,6 +228,23 @@ static void HandleUpdateSnapshot(const SHADOW_MESSAGE_CONTEXT* messageContext, c
     Log(SPLIT);
 }
 
+static void HandleDeleteAccepted(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext)
+{
+    Log("Received a message for shadow delete accepted.");
+    HandleAccepted(messageContext, accepted, callbackContext);
+
+    Log(SPLIT);
+}
+
+static void HandleDeleteRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext)
+{
+    Log("Received a message for shadow delete rejected.");
+    HandleRejected(messageContext, error, callbackContext);
+
+    Log(SPLIT);
+}
+
+
 static void HandleDelta(const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON_Object* desired, void* callbackContext)
 {
     Log("Received a message for shadow delta");
@@ -281,10 +306,13 @@ int iotdm_client_run(void)
 
     iotdm_client_register_delta(handle, HandleDelta, handle);
     iotdm_client_register_get_accepted(handle, HandleGetAccepted, handle);
+    iotdm_client_register_get_rejected(handle, HandleGetRejected, handle);
     iotdm_client_register_update_accepted(handle, HandleUpdateAccepted, handle);
     iotdm_client_register_update_rejected(handle, HandleUpdateRejected, handle);
     iotdm_client_register_update_documents(handle, HandleUpdateDocuments, handle);
     iotdm_client_register_update_snapshot(handle, HandleUpdateSnapshot, handle);
+    iotdm_client_register_delete_accepted(handle, HandleDeleteAccepted, handle);
+    iotdm_client_register_delete_rejected(handle, HandleDeleteRejected, handle);
 
     IOTDM_CLIENT_OPTIONS options;
     options.cleanSession = true;
@@ -365,6 +393,16 @@ int iotdm_client_run(void)
     }
 
     DESTROY_MODEL_INSTANCE(pump);
+
+    // Sample: delete the shadow
+    if (0 == iotdm_client_delete_shadow(handle, DEVICE, "222222"))
+    {
+        Log("Succeeded to get device shadow");
+    }
+    else
+    {
+        Log("Failed to get device shadow");
+    }
 
     // Sample: subscribe the delta topic and update shadow with desired value.
     while (iotdm_client_dowork(handle) >= 0)
