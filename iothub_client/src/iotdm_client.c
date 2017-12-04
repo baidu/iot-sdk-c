@@ -21,24 +21,35 @@
 #include "iotdm_client.h"
 #include "iothub_mqtt_client.h"
 
-#define     SUB_TOPIC_SIZE                  4
+#define     SUB_TOPIC_SIZE                  9
 
 #define     SLASH                           '/'
 
 #define     TOPIC_PREFIX                    "$baidu/iot/shadow/"
 
 #define     TOPIC_SUFFIX_DELTA              "delta"
+#define     TOPIC_SUFFIX_GET_ACCEPTED       "get/accepted"
 #define     TOPIC_SUFFIX_GET_REJECTED       "get/rejected"
 #define     TOPIC_SUFFIX_UPDATE_ACCETPED    "update/accepted"
 #define     TOPIC_SUFFIX_UPDATE_REJECTED    "update/rejected"
+#define     TOPIC_SUFFIX_UPDATE_DOCUMENTS   "update/documents"
+#define     TOPIC_SUFFIX_UPDATE_SNAPSHOT    "update/snapshot"
+#define     TOPIC_SUFFIX_DELETE_ACCEPTED    "delete/accepted"
+#define     TOPIC_SUFFIX_DELETE_REJECTED    "delete/rejected"
 
 #define     PUB_GET                         "$baidu/iot/shadow/%s/get"
 #define     PUB_UPDATE                      "$baidu/iot/shadow/%s/update"
+#define     PUB_DELETE                      "$baidu/iot/shadow/%s/delete"
 
 #define     SUB_DELTA                       "$baidu/iot/shadow/%s/delta"
+#define     SUB_GET_ACCEPTED                "$baidu/iot/shadow/%s/get/accepted"
 #define     SUB_GET_REJECTED                "$baidu/iot/shadow/%s/get/rejected"
 #define     SUB_UPDATE_ACCEPTED             "$baidu/iot/shadow/%s/update/accepted"
 #define     SUB_UPDATE_REJECTED             "$baidu/iot/shadow/%s/update/rejected"
+#define     SUB_UPDATE_DOCUMENTS            "$baidu/iot/shadow/%s/update/documents"
+#define     SUB_UPDATE_SNAPSHOT             "$baidu/iot/shadow/%s/update/snapshot"
+#define     SUB_DELETE_ACCEPTED             "$baidu/iot/shadow/%s/delete/accepted"
+#define     SUB_DELETE_REJECTED             "$baidu/iot/shadow/%s/delete/rejected"
 
 #define     KEY_CODE                        "code"
 #define     KEY_DESIRED                     "desired"
@@ -47,21 +58,33 @@
 #define     KEY_REPORTED                    "reported"
 #define     KEY_REQUEST_ID                  "requestId"
 #define     KEY_VERSION                     "profileVersion"
+#define     KEY_CURRENT                     "current"
+#define     KEY_PREVIOUS                    "previous"
 
 typedef struct SHADOW_CALLBACK_TAG
 {
     SHADOW_DELTA_CALLBACK delta;
+    SHADOW_ACCEPTED_CALLBACK getAccepted;
     SHADOW_ERROR_CALLBACK getRejected;
     SHADOW_ERROR_CALLBACK updateRejected;
     SHADOW_ACCEPTED_CALLBACK updateAccepted;
+    SHADOW_DOCUMENTS_CALLBACK updateDocuments;
+    SHADOW_SNAPSHOT_CALLBACK updateSnapshot;
+    SHADOW_ACCEPTED_CALLBACK deleteAccepted;
+    SHADOW_ERROR_CALLBACK deleteRejected;
 } SHADOW_CALLBACK;
 
 typedef struct SHADOW_CALLBACK_CONTEXT_TAG
 {
     void* delta;
+    void* getAccepted;
     void* getRejected;
     void* updateRejected;
     void* updateAccepted;
+    void* updateDocuments;
+    void* updateSnapshot;
+    void* deleteAccepted;
+    void* deleteRejected;
 } SHADOW_CALLBACK_CONTEXT;
 
 typedef struct IOTDM_CLIENT_TAG
@@ -111,7 +134,7 @@ static char* GenerateTopic(const char* formate, const char* device)
 {
     if (NULL == formate || NULL == device)
     {
-        LogError("Failue: both formate and device should not be NULL.");
+        LogError("Failure: both formate and device should not be NULL.");
         return NULL;
     }
     size_t size = StringLength(formate) + StringLength(device) + 1;
@@ -204,21 +227,41 @@ static char* GetDeviceFromTopic(const char* topic, SHADOW_CALLBACK_TYPE* type)
     }
 
     // TODO: support more topics for subscription handle.
-    if (true == StringCmp(TOPIC_SUFFIX_DELTA, topic, end + 1, StringLength(topic) + 1))
+    if (StringCmp(TOPIC_SUFFIX_DELTA, topic, end + 1, StringLength(topic) + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_DELTA;
     }
-    else if (true == StringCmp(TOPIC_SUFFIX_GET_REJECTED, topic, end + 1, StringLength(topic) + 1))
+    else if (StringCmp(TOPIC_SUFFIX_GET_ACCEPTED, topic, end + 1, StringLength(topic) + 1))
+    {
+        *type = SHADOW_CALLBACK_TYPE_GET_ACCEPTED;
+    }
+    else if (StringCmp(TOPIC_SUFFIX_GET_REJECTED, topic, end + 1, StringLength(topic) + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_GET_REJECTED;
     }
-    else if (true == StringCmp(TOPIC_SUFFIX_UPDATE_ACCETPED, topic, end + 1, StringLength(topic) + 1))
+    else if (StringCmp(TOPIC_SUFFIX_UPDATE_ACCETPED, topic, end + 1, StringLength(topic) + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_UPDATE_ACCEPTED;
     }
-    else if (true == StringCmp(TOPIC_SUFFIX_UPDATE_REJECTED, topic, end + 1, StringLength(topic) + 1))
+    else if (StringCmp(TOPIC_SUFFIX_UPDATE_REJECTED, topic, end + 1, StringLength(topic) + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_UPDATE_REJECTED;
+    }
+    else if (StringCmp(TOPIC_SUFFIX_UPDATE_DOCUMENTS, topic, end + 1, StringLength(topic) + 1))
+    {
+        *type = SHADOW_CALLBACK_TYPE_UPDATE_DOCUMENTS;
+    }
+    else if (StringCmp(TOPIC_SUFFIX_UPDATE_SNAPSHOT, topic, end + 1, StringLength(topic) + 1))
+    {
+        *type = SHADOW_CALLBACK_TYPE_UPDATE_SNAPSHOT;
+    }
+    else if (StringCmp(TOPIC_SUFFIX_DELETE_ACCEPTED, topic, end + 1, StringLength(topic) + 1))
+    {
+        *type = SHADOW_CALLBACK_TYPE_DELETE_ACCEPTED;
+    }
+    else if (StringCmp(TOPIC_SUFFIX_DELETE_REJECTED, topic, end + 1, StringLength(topic) + 1))
+    {
+        *type = SHADOW_CALLBACK_TYPE_DELETE_REJECTED;
     }
     else
     {
@@ -276,22 +319,22 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
             return -1;
         }
     }
+    if (NULL != handle->callback.getAccepted)
+    {
+        subscribe[index] = GenerateTopic(SUB_GET_ACCEPTED, handle->name);
+        if (NULL == subscribe[index++])
+        {
+            LogError("Failure: failed to generate the sub topic 'get/accepted'.");
+            ReleaseSubscription(subscribe, length);
+            return -1;
+        }
+    }
     if (NULL != handle->callback.getRejected)
     {
         subscribe[index] = GenerateTopic(SUB_GET_REJECTED, handle->name);
         if (NULL == subscribe[index++])
         {
             LogError("Failure: failed to generate the sub topic 'get/rejected'.");
-            ReleaseSubscription(subscribe, length);
-            return -1;
-        }
-    }
-    if (NULL != handle->callback.updateAccepted)
-    {
-        subscribe[index] = GenerateTopic(SUB_UPDATE_ACCEPTED, handle->name);
-        if (NULL == subscribe[index++])
-        {
-            LogError("Failure: failed to generate the sub topic 'update/accepted'.");
             ReleaseSubscription(subscribe, length);
             return -1;
         }
@@ -316,6 +359,46 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
             return -1;
         }
     }
+    if (NULL != handle->callback.updateDocuments)
+    {
+        subscribe[index] = GenerateTopic(SUB_UPDATE_DOCUMENTS, handle->name);
+        if (NULL == subscribe[index++])
+        {
+            LogError("Failure: failed to generate the sub topic 'update/documents'.");
+            ReleaseSubscription(subscribe, length);
+            return -1;
+        }
+    }
+    if (NULL != handle->callback.updateSnapshot)
+    {
+        subscribe[index] = GenerateTopic(SUB_UPDATE_SNAPSHOT, handle->name);
+        if (NULL == subscribe[index++])
+        {
+            LogError("Failure: failed to generate the sub topic 'update/snapshot'.");
+            ReleaseSubscription(subscribe, length);
+            return -1;
+        }
+    }
+    if (NULL != handle->callback.deleteAccepted)
+    {
+        subscribe[index] = GenerateTopic(SUB_DELETE_ACCEPTED, handle->name);
+        if (NULL == subscribe[index++])
+        {
+            LogError("Failure: failed to generate the sub topic 'delete/accepted'.");
+            ReleaseSubscription(subscribe, length);
+            return -1;
+        }
+    }
+    if (NULL != handle->callback.deleteRejected)
+    {
+        subscribe[index] = GenerateTopic(SUB_DELETE_REJECTED, handle->name);
+        if (NULL == subscribe[index++])
+        {
+            LogError("Failure: failed to generate the sub topic 'delete/rejected'.");
+            ReleaseSubscription(subscribe, length);
+            return -1;
+        }
+    }
 
     return index;
 }
@@ -332,7 +415,7 @@ static void OnRecvCallbackForDelta(const IOTDM_CLIENT_HANDLE handle, const SHADO
     (*(handle->callback.delta))(msgContext, desired, handle->context.delta);
 }
 
-static void OnRecvCallbackForAccepted(const IOTDM_CLIENT_HANDLE handle, const SHADOW_MESSAGE_CONTEXT* msgContext, const JSON_Object* root)
+static void OnRecvCallbackForAccepted(const SHADOW_MESSAGE_CONTEXT* msgContext, const JSON_Object* root, const SHADOW_ACCEPTED_CALLBACK callback, void* callbackContext)
 {
     SHADOW_ACCEPTED shadow_accepted;
     shadow_accepted.reported = json_object_get_object(root, KEY_REPORTED);
@@ -340,7 +423,27 @@ static void OnRecvCallbackForAccepted(const IOTDM_CLIENT_HANDLE handle, const SH
     shadow_accepted.lastUpdateTime = json_object_get_object(root, KEY_LASTUPDATEDTIME);
     shadow_accepted.profileVersion = (int)json_object_get_number(root, KEY_VERSION);
 
-    (*(handle->callback.updateAccepted))(msgContext, &shadow_accepted, handle->context.updateAccepted);
+    (*callback)(msgContext, &shadow_accepted, callbackContext);
+}
+
+static void OnRecvCallbackForDocuments(const IOTDM_CLIENT_HANDLE handle, const SHADOW_MESSAGE_CONTEXT* msgContext, const JSON_Object* root)
+{
+    SHADOW_DOCUMENTS shadow_documents;
+    shadow_documents.profileVersion = (int)json_object_get_number(root, KEY_VERSION);
+    shadow_documents.current = json_object_get_object(root, KEY_CURRENT);
+    shadow_documents.previous = json_object_get_object(root, KEY_PREVIOUS);
+
+    (*(handle->callback.updateDocuments))(msgContext, &shadow_documents, handle->context.updateDocuments);
+}
+
+static void OnRecvCallbackForSnapshot(const IOTDM_CLIENT_HANDLE handle, const SHADOW_MESSAGE_CONTEXT* msgContext, const JSON_Object* root)
+{
+    SHADOW_SNAPSHOT shadow_snapshot;
+    shadow_snapshot.profileVersion = (int)json_object_get_number(root, KEY_VERSION);
+    shadow_snapshot.reported = json_object_get_object(root, KEY_REPORTED);
+    shadow_snapshot.lastUpdateTime = json_object_get_object(root, KEY_LASTUPDATEDTIME);
+
+    (*(handle->callback.updateSnapshot))(msgContext, &shadow_snapshot, handle->context.updateSnapshot);
 }
 
 static void OnRecvCallbackForError(const SHADOW_MESSAGE_CONTEXT* msgContext, const JSON_Object* root, const SHADOW_ERROR_CALLBACK callback, void* callbackContext)
@@ -395,16 +498,36 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
                 OnRecvCallbackForDelta(handle, &msgContext, root);
                 break;
 
+            case SHADOW_CALLBACK_TYPE_GET_ACCEPTED:
+                OnRecvCallbackForAccepted(&msgContext, root, handle->callback.getAccepted, handle->context.getAccepted);
+                break;
+
             case SHADOW_CALLBACK_TYPE_GET_REJECTED:
                 OnRecvCallbackForError(&msgContext, root, handle->callback.getRejected, handle->context.getRejected);
                 break;
 
             case SHADOW_CALLBACK_TYPE_UPDATE_ACCEPTED:
-                OnRecvCallbackForAccepted(handle, &msgContext, root);
+                OnRecvCallbackForAccepted(&msgContext, root, handle->callback.updateAccepted, handle->context.updateAccepted);
                 break;
 
             case SHADOW_CALLBACK_TYPE_UPDATE_REJECTED:
                 OnRecvCallbackForError(&msgContext, root, handle->callback.updateRejected, handle->context.updateRejected);
+                break;
+
+            case SHADOW_CALLBACK_TYPE_UPDATE_DOCUMENTS:
+                OnRecvCallbackForDocuments(handle, &msgContext, root);
+                break;
+
+            case SHADOW_CALLBACK_TYPE_UPDATE_SNAPSHOT:
+                OnRecvCallbackForSnapshot(handle, &msgContext, root);
+                break;
+
+            case SHADOW_CALLBACK_TYPE_DELETE_ACCEPTED:
+                OnRecvCallbackForAccepted(&msgContext, root, handle->callback.deleteAccepted, handle->context.deleteAccepted);
+                break;
+
+            case SHADOW_CALLBACK_TYPE_DELETE_REJECTED:
+                OnRecvCallbackForError(&msgContext, root, handle->callback.deleteRejected, handle->context.deleteRejected);
                 break;
 
             default:
@@ -448,12 +571,24 @@ static void ResetIotDmClient(IOTDM_CLIENT_HANDLE handle)
         handle->mqttClient = NULL;
 
         handle->callback.delta = NULL;
+        handle->callback.getAccepted = NULL;
         handle->callback.getRejected = NULL;
+        handle->callback.updateAccepted = NULL;
         handle->callback.updateRejected = NULL;
+        handle->callback.updateDocuments = NULL;
+        handle->callback.updateSnapshot = NULL;
+        handle->callback.deleteAccepted = NULL;
+        handle->callback.deleteRejected = NULL;
 
         handle->context.delta = NULL;
+        handle->context.getAccepted = NULL;
         handle->context.getRejected = NULL;
+        handle->context.updateAccepted = NULL;
         handle->context.updateRejected = NULL;
+        handle->context.updateSnapshot = NULL;
+        handle->context.updateDocuments = NULL;
+        handle->context.deleteAccepted = NULL;
+        handle->context.deleteRejected = NULL;
     }
 }
 
@@ -687,6 +822,12 @@ void iotdm_client_register_delta(IOTDM_CLIENT_HANDLE handle, SHADOW_DELTA_CALLBA
     handle->context.delta = callbackContext;
 }
 
+void iotdm_client_register_get_accepted(IOTDM_CLIENT_HANDLE handle, SHADOW_ACCEPTED_CALLBACK callback, void* callbackContext)
+{
+    handle->callback.getAccepted = callback;
+    handle->context.getAccepted = callbackContext;
+}
+
 void iotdm_client_register_get_rejected(IOTDM_CLIENT_HANDLE handle, SHADOW_ERROR_CALLBACK callback, void* callbackContext)
 {
     handle->callback.getRejected = callback;
@@ -705,6 +846,30 @@ void iotdm_client_register_update_rejected(IOTDM_CLIENT_HANDLE handle, SHADOW_ER
     handle->context.updateRejected = callbackContext;
 }
 
+void iotdm_client_register_update_documents(IOTDM_CLIENT_HANDLE handle, SHADOW_DOCUMENTS_CALLBACK callback, void* callbackContext)
+{
+    handle->callback.updateDocuments = callback;
+    handle->context.updateDocuments = callbackContext;
+}
+
+void iotdm_client_register_update_snapshot(IOTDM_CLIENT_HANDLE handle, SHADOW_SNAPSHOT_CALLBACK callback, void* callbackContext)
+{
+    handle->callback.updateSnapshot = callback;
+    handle->context.updateSnapshot = callbackContext;
+}
+
+void iotdm_client_register_delete_accepted(IOTDM_CLIENT_HANDLE handle, SHADOW_ACCEPTED_CALLBACK callback, void* callbackContext)
+{
+    handle->callback.deleteAccepted = callback;
+    handle->context.deleteAccepted = callbackContext;
+}
+
+void iotdm_client_register_delete_rejected(IOTDM_CLIENT_HANDLE handle, SHADOW_ERROR_CALLBACK callback, void* callbackContext)
+{
+    handle->callback.deleteRejected = callback;
+    handle->context.deleteRejected = callbackContext;
+}
+
 int iotdm_client_get_shadow(const IOTDM_CLIENT_HANDLE handle, const char* device, const char* requestId)
 {
     if (NULL == requestId)
@@ -717,6 +882,21 @@ int iotdm_client_get_shadow(const IOTDM_CLIENT_HANDLE handle, const char* device
     JSON_Object* root = json_object(request);
     json_object_set_string(root, KEY_REQUEST_ID, requestId);
     char* topic = GenerateTopic(PUB_GET, device);
+    return SendRequest(handle, topic, request);
+}
+
+int iotdm_client_delete_shadow(const IOTDM_CLIENT_HANDLE handle, const char* device, const char* requestId)
+{
+    if (NULL == requestId)
+    {
+        LogError("Failure: request id should not be NULL.");
+        return __FAILURE__;
+    }
+
+    JSON_Value* request = json_value_init_object();
+    JSON_Object* root = json_object(request);
+    json_object_set_string(root, KEY_REQUEST_ID, requestId);
+    char* topic = GenerateTopic(PUB_DELETE, device);
     return SendRequest(handle, topic, request);
 }
 

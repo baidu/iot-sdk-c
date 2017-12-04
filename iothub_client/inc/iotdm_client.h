@@ -57,11 +57,17 @@ MOCKABLE_FUNCTION(, void, iotdm_client_deinit, IOTDM_CLIENT_HANDLE, handle);
 MOCKABLE_FUNCTION(, int, iotdm_client_connect, IOTDM_CLIENT_HANDLE, handle, const IOTDM_CLIENT_OPTIONS*, options);
 
 MOCKABLE_FUNCTION(, void, iotdm_client_register_delta, IOTDM_CLIENT_HANDLE, handle, SHADOW_DELTA_CALLBACK, callback, void*, callbackContext);
+MOCKABLE_FUNCTION(, void, iotdm_client_register_get_accepted, IOTDM_CLIENT_HANDLE, handle, SHADOW_ACCEPTED_CALLBACK, callback, void*, callbackContext);
 MOCKABLE_FUNCTION(, void, iotdm_client_register_get_rejected, IOTDM_CLIENT_HANDLE, handle, SHADOW_ERROR_CALLBACK, callback, void*, callbackContext);
 MOCKABLE_FUNCTION(, void, iotdm_client_register_update_accepted, IOTDM_CLIENT_HANDLE, handle, SHADOW_ACCEPTED_CALLBACK, callback, void*, callbackContext);
 MOCKABLE_FUNCTION(, void, iotdm_client_register_update_rejected, IOTDM_CLIENT_HANDLE, handle, SHADOW_ERROR_CALLBACK, callback, void*, callbackContext);
+MOCKABLE_FUNCTION(, void, iotdm_client_register_update_documents, IOTDM_CLIENT_HANDLE, handle, SHADOW_DOCUMENTS_CALLBACK, callback, void*, callbackContext);
+MOCKABLE_FUNCTION(, void, iotdm_client_register_update_snapshot, IOTDM_CLIENT_HANDLE, handle, SHADOW_SNAPSHOT_CALLBACK, callback, void*, callbackContext);
+MOCKABLE_FUNCTION(, void, iotdm_client_register_delete_accepted, IOTDM_CLIENT_HANDLE, handle, SHADOW_ACCEPTED_CALLBACK, callback, void*, callbackContext);
+MOCKABLE_FUNCTION(, void, iotdm_client_register_delete_rejected, IOTDM_CLIENT_HANDLE, handle, SHADOW_ERROR_CALLBACK, callback, void*, callbackContext);
 
 MOCKABLE_FUNCTION(, int, iotdm_client_get_shadow, const IOTDM_CLIENT_HANDLE, handle, const char*, device, const char*, requestId);
+MOCKABLE_FUNCTION(, int, iotdm_client_delete_shadow, const IOTDM_CLIENT_HANDLE, handle, const char*, device, const char*, requestId);
 MOCKABLE_FUNCTION(, int, iotdm_client_update_desired, const IOTDM_CLIENT_HANDLE, handle, const char*, device, const char*, requestId, uint32_t, version, JSON_Value*, desired, JSON_Value*, lastUpdatedTime);
 MOCKABLE_FUNCTION(, int, iotdm_client_update_shadow, const IOTDM_CLIENT_HANDLE, handle, const char*, device, const char*, requestId, uint32_t, version, JSON_Value*, reported, JSON_Value*, lastUpdatedTime);
 MOCKABLE_FUNCTION(, int, iotdm_client_update_desired_with_binary, const IOTDM_CLIENT_HANDLE, handle, const char*, device, const char*, requestId, uint32_t, version, const char*, desired, const char*, lastUpdatedTime);
