@@ -73,6 +73,7 @@ MOCKABLE_FUNCTION(, int, iotdm_client_update_shadow, const IOTDM_CLIENT_HANDLE, 
 MOCKABLE_FUNCTION(, int, iotdm_client_update_desired_with_binary, const IOTDM_CLIENT_HANDLE, handle, const char*, device, const char*, requestId, uint32_t, version, const char*, desired, const char*, lastUpdatedTime);
 MOCKABLE_FUNCTION(, int, iotdm_client_update_shadow_with_binary, const IOTDM_CLIENT_HANDLE, handle, const char*, device, const char*, requestId, uint32_t, version, const char*, reported, const char*, lastUpdatedTime);
 
+MOCKABLE_FUNCTION(, int, iotdm_client_general_pub, const IOTDM_CLIENT_HANDLE, handle, const char*, topicSuffix, const char*, payload);
 
 MOCKABLE_FUNCTION(, int, iotdm_client_dowork, const IOTDM_CLIENT_HANDLE, handle);
 

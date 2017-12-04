@@ -40,6 +40,7 @@
 #define     PUB_GET                         "$baidu/iot/shadow/%s/get"
 #define     PUB_UPDATE                      "$baidu/iot/shadow/%s/update"
 #define     PUB_DELETE                      "$baidu/iot/shadow/%s/delete"
+#define     PUB_GENERAL                     "$baidu/iot/general/%s"
 
 #define     SUB_DELTA                       "$baidu/iot/shadow/%s/delta"
 #define     SUB_GET_ACCEPTED                "$baidu/iot/shadow/%s/get/accepted"
@@ -897,6 +898,20 @@ int iotdm_client_delete_shadow(const IOTDM_CLIENT_HANDLE handle, const char* dev
     JSON_Object* root = json_object(request);
     json_object_set_string(root, KEY_REQUEST_ID, requestId);
     char* topic = GenerateTopic(PUB_DELETE, device);
+    return SendRequest(handle, topic, request);
+}
+
+int iotdm_client_general_pub(const IOTDM_CLIENT_HANDLE handle, const char* topicSuffix, const char* payload)
+{
+    if (NULL == topicSuffix)
+    {
+        LogError("Failure: topic suffix should not be NULL.");
+        return __FAILURE__;
+    }
+
+    JSON_Value* request = json_value_init_string(payload);
+    char* topic = GenerateTopic(PUB_GENERAL, topicSuffix);
+    LogInfo(topic);
     return SendRequest(handle, topic, request);
 }
 
