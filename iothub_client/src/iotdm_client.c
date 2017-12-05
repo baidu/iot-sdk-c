@@ -21,11 +21,13 @@
 #include "iotdm_client.h"
 #include "iothub_mqtt_client.h"
 
-#define     SUB_TOPIC_SIZE                  9
+#define     SUB_TOPIC_SIZE                  10
 
 #define     SLASH                           '/'
+#define     MULTI_LEVEL_WILDCARD            "#"
 
 #define     TOPIC_PREFIX                    "$baidu/iot/shadow/"
+#define     TOPIC_PREFIX_GENERAL            "$baidu/iot/general/"
 
 #define     TOPIC_SUFFIX_DELTA              "delta"
 #define     TOPIC_SUFFIX_GET_ACCEPTED       "get/accepted"
@@ -51,6 +53,7 @@
 #define     SUB_UPDATE_SNAPSHOT             "$baidu/iot/shadow/%s/update/snapshot"
 #define     SUB_DELETE_ACCEPTED             "$baidu/iot/shadow/%s/delete/accepted"
 #define     SUB_DELETE_REJECTED             "$baidu/iot/shadow/%s/delete/rejected"
+#define     SUB_GENERAL                     "$baidu/iot/general/%s"
 
 #define     KEY_CODE                        "code"
 #define     KEY_DESIRED                     "desired"
@@ -73,6 +76,7 @@ typedef struct SHADOW_CALLBACK_TAG
     SHADOW_SNAPSHOT_CALLBACK updateSnapshot;
     SHADOW_ACCEPTED_CALLBACK deleteAccepted;
     SHADOW_ERROR_CALLBACK deleteRejected;
+    SHADOW_GENERAL_CALLBACK general;
 } SHADOW_CALLBACK;
 
 typedef struct SHADOW_CALLBACK_CONTEXT_TAG
@@ -86,6 +90,7 @@ typedef struct SHADOW_CALLBACK_CONTEXT_TAG
     void* updateSnapshot;
     void* deleteAccepted;
     void* deleteRejected;
+    void* general;
 } SHADOW_CALLBACK_CONTEXT;
 
 typedef struct IOTDM_CLIENT_TAG
@@ -202,6 +207,16 @@ static char* GetBrokerEndpoint(char* broker, MQTT_CONNECTION_TYPE* mqttConnType)
 
 static char* GetDeviceFromTopic(const char* topic, SHADOW_CALLBACK_TYPE* type)
 {
+    // general shadow topic
+    char* generalPrefix = TOPIC_PREFIX_GENERAL;
+    size_t generalPrifxLength = StringLength(generalPrefix);
+    if (StringCmp(generalPrefix, topic, 0, generalPrifxLength))
+    {
+        *type = SHADOW_CALLBACK_TYPE_GENERAL;
+        return NULL;
+    }
+
+    // other common shadow topics
     char* prefix = TOPIC_PREFIX;
 
     size_t prefixLength = StringLength(prefix);
@@ -400,6 +415,16 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
             return -1;
         }
     }
+    if (NULL != handle->callback.general)
+    {
+        subscribe[index] = GenerateTopic(SUB_GENERAL, MULTI_LEVEL_WILDCARD);
+        if (NULL == subscribe[index++])
+        {
+            LogError("Failure: failed to generate the sub topic 'general/#'.");
+            ReleaseSubscription(subscribe, length);
+            return -1;
+        }
+    }
 
     return index;
 }
@@ -456,6 +481,11 @@ static void OnRecvCallbackForError(const SHADOW_MESSAGE_CONTEXT* msgContext, con
     (*callback)(msgContext, &error, callbackContext);
 }
 
+static void OnRecvCallbackForGeneral(const char* topic, const char* message, const SHADOW_GENERAL_CALLBACK callback, void* callbackContext)
+{
+    (*callback)(topic, message, callbackContext);
+}
+
 static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
 {
     const char* topic = mqttmessage_getTopicName(msgHandle);
@@ -469,14 +499,25 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
     SHADOW_CALLBACK_TYPE type;
     SHADOW_MESSAGE_CONTEXT msgContext;
     msgContext.device = GetDeviceFromTopic(topic, &type);
+
+    IOTHUB_MQTT_CLIENT_HANDLE mqttClient = (IOTHUB_MQTT_CLIENT_HANDLE)context;
+    IOTDM_CLIENT_HANDLE handle = (IOTDM_CLIENT_HANDLE)mqttClient->callbackContext;
+
+    // handle iotdm general callback
+    if (SHADOW_CALLBACK_TYPE_GENERAL == type)
+    {
+        OnRecvCallbackForGeneral(topic, (char*) payload->message, handle->callback.general, handle->context.general);
+        free(msgContext.device);
+        return;
+    }
+
+    // handle iotdm other callbacks
     if (NULL == msgContext.device)
     {
         LogError("Failure: cannot get the device name from the subscribed topic.");
         return;
     }
 
-    IOTHUB_MQTT_CLIENT_HANDLE mqttClient = (IOTHUB_MQTT_CLIENT_HANDLE)context;
-    IOTDM_CLIENT_HANDLE handle = (IOTDM_CLIENT_HANDLE)mqttClient->callbackContext;
     JSON_Value* data = json_parse_string((char*) payload->message);
     if (NULL == data)
     {
@@ -580,6 +621,7 @@ static void ResetIotDmClient(IOTDM_CLIENT_HANDLE handle)
         handle->callback.updateSnapshot = NULL;
         handle->callback.deleteAccepted = NULL;
         handle->callback.deleteRejected = NULL;
+        handle->callback.general = NULL;
 
         handle->context.delta = NULL;
         handle->context.getAccepted = NULL;
@@ -590,6 +632,7 @@ static void ResetIotDmClient(IOTDM_CLIENT_HANDLE handle)
         handle->context.updateDocuments = NULL;
         handle->context.deleteAccepted = NULL;
         handle->context.deleteRejected = NULL;
+        handle->context.general = NULL;
     }
 }
 
@@ -871,6 +914,12 @@ void iotdm_client_register_delete_rejected(IOTDM_CLIENT_HANDLE handle, SHADOW_ER
     handle->context.deleteRejected = callbackContext;
 }
 
+void iotdm_client_register_general(IOTDM_CLIENT_HANDLE handle, SHADOW_GENERAL_CALLBACK callback, void* callbackContext)
+{
+    handle->callback.general = callback;
+    handle->context.general = callbackContext;
+}
+
 int iotdm_client_get_shadow(const IOTDM_CLIENT_HANDLE handle, const char* device, const char* requestId)
 {
     if (NULL == requestId)
@@ -911,7 +960,6 @@ int iotdm_client_general_pub(const IOTDM_CLIENT_HANDLE handle, const char* topic
 
     JSON_Value* request = json_value_init_string(payload);
     char* topic = GenerateTopic(PUB_GENERAL, topicSuffix);
-    LogInfo(topic);
     return SendRequest(handle, topic, request);
 }
 

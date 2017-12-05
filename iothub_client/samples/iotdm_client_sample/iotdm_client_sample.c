@@ -282,57 +282,25 @@ static void HandleDelta(const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON
     Log(SPLIT);
 }
 
-int iotdm_client_run(void)
+static void HandleGeneral(const char* topic, const char* message, void* callbackContext)
 {
-    Log("The device management edge simulator is starting ...");
-    if (0 != platform_init())
+    Log("Received a message for shadow general");
+    Log("Topic:");
+    Log(topic);
+    Log("Message:");
+    Log(message);
+
+    if (NULL == callbackContext)
     {
-        Log("platform_init failed");
-        return __FAILURE__;
+        LogError("Failure: the callback context is NULL.");
     }
 
-    if (SERIALIZER_OK != serializer_init(NULL))
-    {
-        Log("serializer_init failed");
-        return __FAILURE__;
-    }
+    Log(SPLIT);
+}
 
-    IOTDM_CLIENT_HANDLE handle = iotdm_client_init(ADDRESS, DEVICE);
-    if (NULL == handle)
-    {
-        Log("iotdm_client_init failed");
-        return __FAILURE__;
-    }
 
-    iotdm_client_register_delta(handle, HandleDelta, handle);
-    iotdm_client_register_get_accepted(handle, HandleGetAccepted, handle);
-    iotdm_client_register_get_rejected(handle, HandleGetRejected, handle);
-    iotdm_client_register_update_accepted(handle, HandleUpdateAccepted, handle);
-    iotdm_client_register_update_rejected(handle, HandleUpdateRejected, handle);
-    iotdm_client_register_update_documents(handle, HandleUpdateDocuments, handle);
-    iotdm_client_register_update_snapshot(handle, HandleUpdateSnapshot, handle);
-    iotdm_client_register_delete_accepted(handle, HandleDeleteAccepted, handle);
-    iotdm_client_register_delete_rejected(handle, HandleDeleteRejected, handle);
-
-    IOTDM_CLIENT_OPTIONS options;
-    options.cleanSession = true;
-    options.clientId = DEVICE;
-    options.username = USERNAME;
-    options.password = PASSWORD;
-    options.keepAliveInterval = 5;
-    options.retryTimeoutInSeconds = 300;
-
-    if (0 != iotdm_client_connect(handle, &options))
-    {
-        iotdm_client_deinit(handle);
-        Log("iotdm_client_connect failed");
-        return __FAILURE__;
-    }
-
-    // Subscribe the topics.
-    iotdm_client_dowork(handle);
-
-    // Sample: get device shadow
+static void sample_get_device_shadow(IOTDM_CLIENT_HANDLE handle)
+{
     if (0 == iotdm_client_get_shadow(handle, DEVICE, "123456789"))
     {
         Log("Succeeded to get device shadow");
@@ -341,8 +309,34 @@ int iotdm_client_run(void)
     {
         Log("Failed to get device shadow");
     }
+}
 
-    // Sample: use 'serializer' to encode device model to binary and update the device shadow.
+static void sample_delete_shadow(IOTDM_CLIENT_HANDLE handle)
+{
+    if (0 == iotdm_client_delete_shadow(handle, DEVICE, "222222"))
+    {
+        Log("Succeeded to get device shadow");
+    }
+    else
+    {
+        Log("Failed to get device shadow");
+    }
+}
+
+static void sample_general_pub(IOTDM_CLIENT_HANDLE handle)
+{
+    if (0 == iotdm_client_general_pub(handle, "a/b", "Hello IoT"))
+    {
+        Log("Succeeded to pub message to general topic");
+    }
+    else
+    {
+        Log("Failed to pub message to general topic");
+    }
+}
+
+static void sample_update_shadow(IOTDM_CLIENT_HANDLE handle)
+{
     BaiduSamplePump* pump = CREATE_MODEL_INSTANCE(BaiduIotDeviceSample, BaiduSamplePump);
     pump->FrequencyIn = 1;
     pump->FrequencyOut = 2;
@@ -393,16 +387,73 @@ int iotdm_client_run(void)
     }
 
     DESTROY_MODEL_INSTANCE(pump);
+}
+
+
+
+int iotdm_client_run(void)
+{
+    Log("The device management edge simulator is starting ...");
+    if (0 != platform_init())
+    {
+        Log("platform_init failed");
+        return __FAILURE__;
+    }
+
+    if (SERIALIZER_OK != serializer_init(NULL))
+    {
+        Log("serializer_init failed");
+        return __FAILURE__;
+    }
+
+    IOTDM_CLIENT_HANDLE handle = iotdm_client_init(ADDRESS, DEVICE);
+    if (NULL == handle)
+    {
+        Log("iotdm_client_init failed");
+        return __FAILURE__;
+    }
+
+    iotdm_client_register_delta(handle, HandleDelta, handle);
+    iotdm_client_register_get_accepted(handle, HandleGetAccepted, handle);
+    iotdm_client_register_get_rejected(handle, HandleGetRejected, handle);
+    iotdm_client_register_update_accepted(handle, HandleUpdateAccepted, handle);
+    iotdm_client_register_update_rejected(handle, HandleUpdateRejected, handle);
+    iotdm_client_register_update_documents(handle, HandleUpdateDocuments, handle);
+    iotdm_client_register_update_snapshot(handle, HandleUpdateSnapshot, handle);
+    iotdm_client_register_delete_accepted(handle, HandleDeleteAccepted, handle);
+    iotdm_client_register_delete_rejected(handle, HandleDeleteRejected, handle);
+    iotdm_client_register_general(handle, HandleGeneral, handle);
+
+    IOTDM_CLIENT_OPTIONS options;
+    options.cleanSession = true;
+    options.clientId = DEVICE;
+    options.username = USERNAME;
+    options.password = PASSWORD;
+    options.keepAliveInterval = 5;
+    options.retryTimeoutInSeconds = 300;
+
+    if (0 != iotdm_client_connect(handle, &options))
+    {
+        iotdm_client_deinit(handle);
+        Log("iotdm_client_connect failed");
+        return __FAILURE__;
+    }
+
+    // Subscribe the topics.
+    iotdm_client_dowork(handle);
+    ThreadAPI_Sleep(100);
+
+    // Sample: get device shadow
+    sample_get_device_shadow(handle);
+
+    // Sample: use 'serializer' to encode device model to binary and update the device shadow.
+    sample_update_shadow(handle);
 
     // Sample: delete the shadow
-    if (0 == iotdm_client_delete_shadow(handle, DEVICE, "222222"))
-    {
-        Log("Succeeded to get device shadow");
-    }
-    else
-    {
-        Log("Failed to get device shadow");
-    }
+    sample_delete_shadow(handle);
+
+    // Sample: pub one message to general topic
+    sample_general_pub(handle);
 
     // Sample: subscribe the delta topic and update shadow with desired value.
     while (iotdm_client_dowork(handle) >= 0)

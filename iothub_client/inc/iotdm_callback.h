@@ -39,7 +39,8 @@ typedef enum SHADOW_CALLBACK_TYPE_TAG
     SHADOW_CALLBACK_TYPE_UPDATE_DOCUMENTS,
     SHADOW_CALLBACK_TYPE_UPDATE_SNAPSHOT,
     SHADOW_CALLBACK_TYPE_DELETE_ACCEPTED,
-    SHADOW_CALLBACK_TYPE_DELETE_REJECTED
+    SHADOW_CALLBACK_TYPE_DELETE_REJECTED,
+    SHADOW_CALLBACK_TYPE_GENERAL
 } SHADOW_CALLBACK_TYPE;
 
 typedef struct SHADOW_ERROR_TAG
@@ -81,6 +82,7 @@ typedef void (*SHADOW_ERROR_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageCont
 typedef void (*SHADOW_ACCEPTED_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext);
 typedef void (*SHADOW_DOCUMENTS_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_DOCUMENTS* documents, void* callbackContext);
 typedef void (*SHADOW_SNAPSHOT_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_SNAPSHOT* snapshot, void* callbackContext);
+typedef void (*SHADOW_GENERAL_CALLBACK) (const char* topic, const char* message, void* callbackContext);
 
 #ifdef __cplusplus
 }
