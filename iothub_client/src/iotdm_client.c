@@ -21,10 +21,7 @@
 #include "iotdm_client.h"
 #include "iothub_mqtt_client.h"
 
-#define     SUB_TOPIC_SIZE                  10
-
 #define     SLASH                           '/'
-#define     MULTI_LEVEL_WILDCARD            "#"
 
 #define     TOPIC_PREFIX                    "$baidu/iot/shadow/"
 #define     TOPIC_PREFIX_GENERAL            "$baidu/iot/general/"
@@ -44,16 +41,16 @@
 #define     PUB_DELETE                      "$baidu/iot/shadow/%s/delete"
 #define     PUB_GENERAL                     "$baidu/iot/general/%s"
 
-#define     SUB_DELTA                       "$baidu/iot/shadow/%s/delta"
-#define     SUB_GET_ACCEPTED                "$baidu/iot/shadow/%s/get/accepted"
-#define     SUB_GET_REJECTED                "$baidu/iot/shadow/%s/get/rejected"
-#define     SUB_UPDATE_ACCEPTED             "$baidu/iot/shadow/%s/update/accepted"
-#define     SUB_UPDATE_REJECTED             "$baidu/iot/shadow/%s/update/rejected"
-#define     SUB_UPDATE_DOCUMENTS            "$baidu/iot/shadow/%s/update/documents"
-#define     SUB_UPDATE_SNAPSHOT             "$baidu/iot/shadow/%s/update/snapshot"
-#define     SUB_DELETE_ACCEPTED             "$baidu/iot/shadow/%s/delete/accepted"
-#define     SUB_DELETE_REJECTED             "$baidu/iot/shadow/%s/delete/rejected"
-#define     SUB_GENERAL                     "$baidu/iot/general/%s"
+#define     SUB_DELTA_TOPIC                 "$baidu/iot/shadow/%s/delta"
+#define     SUB_GET_ACCEPTED_TOPIC          "$baidu/iot/shadow/%s/get/accepted"
+#define     SUB_GET_REJECTED_TOPIC          "$baidu/iot/shadow/%s/get/rejected"
+#define     SUB_UPDATE_ACCEPTED_TOPIC       "$baidu/iot/shadow/%s/update/accepted"
+#define     SUB_UPDATE_REJECTED_TOPIC       "$baidu/iot/shadow/%s/update/rejected"
+#define     SUB_UPDATE_DOCUMENTS_TOPIC      "$baidu/iot/shadow/%s/update/documents"
+#define     SUB_UPDATE_SNAPSHOT_TOPIC       "$baidu/iot/shadow/%s/update/snapshot"
+#define     SUB_DELETE_ACCEPTED_TOPIC       "$baidu/iot/shadow/%s/delete/accepted"
+#define     SUB_DELETE_REJECTED_TOPIC       "$baidu/iot/shadow/%s/delete/rejected"
+#define     SUB_GENERAL_TOPIC               "$baidu/iot/general/%s"
 
 #define     KEY_CODE                        "code"
 #define     KEY_DESIRED                     "desired"
@@ -64,6 +61,31 @@
 #define     KEY_VERSION                     "profileVersion"
 #define     KEY_CURRENT                     "current"
 #define     KEY_PREVIOUS                    "previous"
+
+#define     FOREACH_SUB_TOPIC(TOPIC) \
+            TOPIC(SUB_DELTA) \
+            TOPIC(SUB_GET_ACCEPTED) \
+            TOPIC(SUB_GET_REJECTED) \
+            TOPIC(SUB_UPDATE_ACCEPTED) \
+            TOPIC(SUB_UPDATE_REJECTED) \
+            TOPIC(SUB_UPDATE_DOCUMENTS) \
+            TOPIC(SUB_UPDATE_SNAPSHOT) \
+            TOPIC(SUB_DELETE_ACCEPTED) \
+            TOPIC(SUB_DELETE_REJECTED) \
+            TOPIC(SUB_GENERAL) \
+
+#define     GENERATE_ENUM(ENUM) ENUM,
+#define     GENERATE_STRING(STRING) STRING##_TOPIC,
+
+enum SUB_TOPIC_ENUM { FOREACH_SUB_TOPIC(GENERATE_ENUM) };
+static const char *SUB_TOPIC_STRING[] = {FOREACH_SUB_TOPIC(GENERATE_STRING)};
+static const size_t SUB_TOPIC_SIZE = sizeof(SUB_TOPIC_STRING) / sizeof(SUB_TOPIC_STRING[0]);
+
+typedef struct SHADOW_GENERAL_SUB_TOPICS_TAG
+{
+    int size;
+    char** topicSuffixes;
+} SHADOW_GENERAL_SUB_TOPICS;
 
 typedef struct SHADOW_CALLBACK_TAG
 {
@@ -77,6 +99,7 @@ typedef struct SHADOW_CALLBACK_TAG
     SHADOW_ACCEPTED_CALLBACK deleteAccepted;
     SHADOW_ERROR_CALLBACK deleteRejected;
     SHADOW_GENERAL_CALLBACK general;
+    SHADOW_GENERAL_SUB_TOPICS generalSubTopics;
 } SHADOW_CALLBACK;
 
 typedef struct SHADOW_CALLBACK_CONTEXT_TAG
@@ -242,7 +265,6 @@ static char* GetDeviceFromTopic(const char* topic, SHADOW_CALLBACK_TYPE* type)
         return NULL;
     }
 
-    // TODO: support more topics for subscription handle.
     if (StringCmp(TOPIC_SUFFIX_DELTA, topic, end + 1, StringLength(topic) + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_DELTA;
@@ -327,7 +349,7 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
     ResetSubscription(subscribe, length);
     if (NULL != handle->callback.delta)
     {
-        subscribe[index] = GenerateTopic(SUB_DELTA, handle->name);
+        subscribe[index] = GenerateTopic(SUB_TOPIC_STRING[SUB_DELTA], handle->name);
         if (NULL == subscribe[index++])
         {
             LogError("Failure: failed to generate the sub topic 'delta'.");
@@ -337,7 +359,7 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
     }
     if (NULL != handle->callback.getAccepted)
     {
-        subscribe[index] = GenerateTopic(SUB_GET_ACCEPTED, handle->name);
+        subscribe[index] = GenerateTopic(SUB_TOPIC_STRING[SUB_GET_ACCEPTED], handle->name);
         if (NULL == subscribe[index++])
         {
             LogError("Failure: failed to generate the sub topic 'get/accepted'.");
@@ -347,7 +369,7 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
     }
     if (NULL != handle->callback.getRejected)
     {
-        subscribe[index] = GenerateTopic(SUB_GET_REJECTED, handle->name);
+        subscribe[index] = GenerateTopic(SUB_TOPIC_STRING[SUB_GET_REJECTED], handle->name);
         if (NULL == subscribe[index++])
         {
             LogError("Failure: failed to generate the sub topic 'get/rejected'.");
@@ -357,7 +379,7 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
     }
     if (NULL != handle->callback.updateAccepted)
     {
-        subscribe[index] = GenerateTopic(SUB_UPDATE_ACCEPTED, handle->name);
+        subscribe[index] = GenerateTopic(SUB_TOPIC_STRING[SUB_UPDATE_ACCEPTED], handle->name);
         if (NULL == subscribe[index++])
         {
             LogError("Failure: failed to generate the sub topic 'update/accepted'.");
@@ -367,7 +389,7 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
     }
     if (NULL != handle->callback.updateRejected)
     {
-        subscribe[index] = GenerateTopic(SUB_UPDATE_REJECTED, handle->name);
+        subscribe[index] = GenerateTopic(SUB_TOPIC_STRING[SUB_UPDATE_REJECTED], handle->name);
         if (NULL == subscribe[index++])
         {
             LogError("Failure: failed to generate the sub topic 'update/rejected'.");
@@ -377,7 +399,7 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
     }
     if (NULL != handle->callback.updateDocuments)
     {
-        subscribe[index] = GenerateTopic(SUB_UPDATE_DOCUMENTS, handle->name);
+        subscribe[index] = GenerateTopic(SUB_TOPIC_STRING[SUB_UPDATE_DOCUMENTS], handle->name);
         if (NULL == subscribe[index++])
         {
             LogError("Failure: failed to generate the sub topic 'update/documents'.");
@@ -387,7 +409,7 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
     }
     if (NULL != handle->callback.updateSnapshot)
     {
-        subscribe[index] = GenerateTopic(SUB_UPDATE_SNAPSHOT, handle->name);
+        subscribe[index] = GenerateTopic(SUB_TOPIC_STRING[SUB_UPDATE_SNAPSHOT], handle->name);
         if (NULL == subscribe[index++])
         {
             LogError("Failure: failed to generate the sub topic 'update/snapshot'.");
@@ -397,7 +419,7 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
     }
     if (NULL != handle->callback.deleteAccepted)
     {
-        subscribe[index] = GenerateTopic(SUB_DELETE_ACCEPTED, handle->name);
+        subscribe[index] = GenerateTopic(SUB_TOPIC_STRING[SUB_DELETE_ACCEPTED], handle->name);
         if (NULL == subscribe[index++])
         {
             LogError("Failure: failed to generate the sub topic 'delete/accepted'.");
@@ -407,7 +429,7 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
     }
     if (NULL != handle->callback.deleteRejected)
     {
-        subscribe[index] = GenerateTopic(SUB_DELETE_REJECTED, handle->name);
+        subscribe[index] = GenerateTopic(SUB_TOPIC_STRING[SUB_DELETE_REJECTED], handle->name);
         if (NULL == subscribe[index++])
         {
             LogError("Failure: failed to generate the sub topic 'delete/rejected'.");
@@ -417,12 +439,14 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
     }
     if (NULL != handle->callback.general)
     {
-        subscribe[index] = GenerateTopic(SUB_GENERAL, MULTI_LEVEL_WILDCARD);
-        if (NULL == subscribe[index++])
-        {
-            LogError("Failure: failed to generate the sub topic 'general/#'.");
-            ReleaseSubscription(subscribe, length);
-            return -1;
+        for (size_t i = 0; i < handle->callback.generalSubTopics.size; ++i) {
+            subscribe[index] = GenerateTopic(SUB_TOPIC_STRING[SUB_GENERAL], handle->callback.generalSubTopics.topicSuffixes[i]);
+            if (NULL == subscribe[index++])
+            {
+                LogError("Failure: failed to generate the sub topic 'general/#'.");
+                ReleaseSubscription(subscribe, length);
+                return -1;
+            }
         }
     }
 
@@ -503,32 +527,39 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
     IOTHUB_MQTT_CLIENT_HANDLE mqttClient = (IOTHUB_MQTT_CLIENT_HANDLE)context;
     IOTDM_CLIENT_HANDLE handle = (IOTDM_CLIENT_HANDLE)mqttClient->callbackContext;
 
-    // handle iotdm general callback
-    if (SHADOW_CALLBACK_TYPE_GENERAL == type)
-    {
-        OnRecvCallbackForGeneral(topic, (char*) payload->message, handle->callback.general, handle->context.general);
-        free(msgContext.device);
-        return;
-    }
-
-    // handle iotdm other callbacks
-    if (NULL == msgContext.device)
+    // DeviceName in general topic is not required
+    if (NULL == msgContext.device && SHADOW_CALLBACK_TYPE_GENERAL != type)
     {
         LogError("Failure: cannot get the device name from the subscribed topic.");
         return;
     }
 
-    JSON_Value* data = json_parse_string((char*) payload->message);
-    if (NULL == data)
+    // payload->message is not satisfied the length its provided(payload->length)
+    // TODO: check the payload->message setting logic
+    char* message = malloc(sizeof(char) * (payload->length));
+    if (NULL == message) {
+        LogError("Failure: failed to allocate memory for message.");
+        return;
+    }
+    message[payload->length] = '\0';
+    StringCpy(message, (const char *) payload->message, 0, payload->length);
+
+    JSON_Value* data = json_parse_string(message);
+
+    // Message in General topic may not be a valid json value
+    if (NULL == data && SHADOW_CALLBACK_TYPE_GENERAL != type)
     {
         LogError("Failure: failed to deserialize the payload to json.");
+        free(message);
         free(msgContext.device);
         return;
     }
 
     JSON_Object* root = json_object(data);
     msgContext.requestId = json_object_get_string(root, KEY_REQUEST_ID);
-    if (NULL == msgContext.requestId)
+
+    // RequestId in general topic message is not required
+    if (NULL == msgContext.requestId && SHADOW_CALLBACK_TYPE_GENERAL != type)
     {
         LogError("Failure: cannot find the request ID in the received message.");
     }
@@ -572,11 +603,16 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
                 OnRecvCallbackForError(&msgContext, root, handle->callback.deleteRejected, handle->context.deleteRejected);
                 break;
 
+            case SHADOW_CALLBACK_TYPE_GENERAL:
+                OnRecvCallbackForGeneral(topic, message, handle->callback.general, handle->context.general);
+                break;
+
             default:
                 LogError("Failure: the shadow callback type is not supported.");
         }
     }
 
+    free(message);
     free(msgContext.device);
     json_value_free(data);
 }
@@ -633,6 +669,9 @@ static void ResetIotDmClient(IOTDM_CLIENT_HANDLE handle)
         handle->context.deleteAccepted = NULL;
         handle->context.deleteRejected = NULL;
         handle->context.general = NULL;
+
+        handle->callback.generalSubTopics.topicSuffixes = NULL;
+        handle->callback.generalSubTopics.size = 0;
     }
 }
 
@@ -649,7 +688,7 @@ static int SendRequest(const IOTDM_CLIENT_HANDLE handle, char* topic, JSON_Value
         char* encoded = json_serialize_to_string(request);
         if (NULL == encoded)
         {
-            LogError("Failue: failed to encode the json.");
+            LogError("Failure: failed to encode the json.");
             result = __FAILURE__;
         }
         else
@@ -765,8 +804,9 @@ void iotdm_client_deinit(IOTDM_CLIENT_HANDLE handle)
 {
     if (NULL != handle)
     {
-        char* topics[SUB_TOPIC_SIZE];
-        int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE);
+        size_t sub_topic_size = SUB_TOPIC_SIZE + handle->callback.generalSubTopics.size;
+        char* topics[sub_topic_size];
+        int amount = GetSubscription(handle, topics, sub_topic_size);
         if (amount < 0)
         {
             LogError("Failure: failed to get the subscribing topics.");
@@ -774,7 +814,7 @@ void iotdm_client_deinit(IOTDM_CLIENT_HANDLE handle)
         else if (amount > 0)
         {
             unsubscribe_mqtt_topics(handle->mqttClient, (const char**) topics, amount);
-            ReleaseSubscription(topics, SUB_TOPIC_SIZE);
+            ReleaseSubscription(topics, sub_topic_size);
         }
 
         iothub_mqtt_destroy(handle->mqttClient);
@@ -830,8 +870,9 @@ int iotdm_client_dowork(const IOTDM_CLIENT_HANDLE handle)
     handle->subscribed = !(handle->mqttClient->isConnectionLost) && handle->subscribed;
     if (handle->mqttClient->mqttClientStatus == MQTT_CLIENT_STATUS_CONNECTED && !(handle->subscribed))
     {
-        char* topics[SUB_TOPIC_SIZE];
-        int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE);
+        size_t sub_topic_size = SUB_TOPIC_SIZE + handle->callback.generalSubTopics.size;
+        char* topics[sub_topic_size];
+        int amount = GetSubscription(handle, topics, sub_topic_size);
         if (amount < 0)
         {
             LogError("Failure: failed to get the subscribing topics.");
@@ -839,14 +880,14 @@ int iotdm_client_dowork(const IOTDM_CLIENT_HANDLE handle)
         }
         else if (amount > 0)
         {
-            SUBSCRIBE_PAYLOAD subscribe[SUB_TOPIC_SIZE];
+            SUBSCRIBE_PAYLOAD subscribe[sub_topic_size];
             for (size_t index = 0; index < (size_t)amount; ++index)
             {
                 subscribe[index].subscribeTopic = topics[index];
                 subscribe[index].qosReturn = DELIVER_AT_LEAST_ONCE;
             }
             int result = subscribe_mqtt_topics(handle->mqttClient, subscribe, amount);
-            ReleaseSubscription(topics, SUB_TOPIC_SIZE);
+            ReleaseSubscription(topics, sub_topic_size);
             if (0 != result)
             {
                 LogError("Failure: failed to subscribe the topics.");
@@ -914,10 +955,21 @@ void iotdm_client_register_delete_rejected(IOTDM_CLIENT_HANDLE handle, SHADOW_ER
     handle->context.deleteRejected = callbackContext;
 }
 
-void iotdm_client_register_general(IOTDM_CLIENT_HANDLE handle, SHADOW_GENERAL_CALLBACK callback, void* callbackContext)
+// we recommend that you avoid wild card '#' subscriptions to this general topics, such as `$baidu/iot/general/#`
+int iotdm_client_register_general(IOTDM_CLIENT_HANDLE handle, SHADOW_GENERAL_CALLBACK callback, void* callbackContext, char** topics, size_t topicSize)
 {
     handle->callback.general = callback;
     handle->context.general = callbackContext;
+
+    if (NULL == topics || 0 == topicSize) {
+        LogError("Failure: topics should not be null and topicNum should not be 0.");
+        return __FAILURE__;
+    }
+
+    handle->callback.generalSubTopics.size = topicSize;
+    handle->callback.generalSubTopics.topicSuffixes = topics;
+
+    return 0;
 }
 
 int iotdm_client_get_shadow(const IOTDM_CLIENT_HANDLE handle, const char* device, const char* requestId)

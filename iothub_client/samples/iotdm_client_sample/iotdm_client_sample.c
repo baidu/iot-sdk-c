@@ -325,7 +325,18 @@ static void sample_delete_shadow(IOTDM_CLIENT_HANDLE handle)
 
 static void sample_general_pub(IOTDM_CLIENT_HANDLE handle)
 {
+    // pub message to topic `$baidu/iot/general/a/b`
     if (0 == iotdm_client_general_pub(handle, "a/b", "Hello IoT"))
+    {
+        Log("Succeeded to pub message to general topic");
+    }
+    else
+    {
+        Log("Failed to pub message to general topic");
+    }
+
+    // pub message to topic `$baidu/iot/general/a/c`
+    if (0 == iotdm_client_general_pub(handle, "a/c", "Hello World"))
     {
         Log("Succeeded to pub message to general topic");
     }
@@ -422,7 +433,11 @@ int iotdm_client_run(void)
     iotdm_client_register_update_snapshot(handle, HandleUpdateSnapshot, handle);
     iotdm_client_register_delete_accepted(handle, HandleDeleteAccepted, handle);
     iotdm_client_register_delete_rejected(handle, HandleDeleteRejected, handle);
-    iotdm_client_register_general(handle, HandleGeneral, handle);
+
+    // Sub general topics `$baidu/iot/general/a/b` and `$baidu/iot/general/a/c`
+    // We recommend that you avoid wild card '#' subscriptions to this general topics, such as `$baidu/iot/general/#`
+    char* topics[2] = {"a/b", "a/c"};
+    iotdm_client_register_general(handle, HandleGeneral, handle, topics, 2);
 
     IOTDM_CLIENT_OPTIONS options;
     options.cleanSession = true;
@@ -443,6 +458,9 @@ int iotdm_client_run(void)
     iotdm_client_dowork(handle);
     ThreadAPI_Sleep(100);
 
+    // Sample: pub one message to general topic
+    sample_general_pub(handle);
+
     // Sample: get device shadow
     sample_get_device_shadow(handle);
 
@@ -451,9 +469,6 @@ int iotdm_client_run(void)
 
     // Sample: delete the shadow
     sample_delete_shadow(handle);
-
-    // Sample: pub one message to general topic
-    sample_general_pub(handle);
 
     // Sample: subscribe the delta topic and update shadow with desired value.
     while (iotdm_client_dowork(handle) >= 0)
