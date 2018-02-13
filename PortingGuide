@@ -1,0 +1,39 @@
+如何移植百度天工IOT HUB C语言SDK到其他平台
+
+本文档主要介绍如何移植C公共库到其他目前还未支持的平台。
+当前百度云天工的IoT Hub的C语言SDK和百度云BOS的C语言SDK都是使用该C公共库，下述内容详细描述如何移植该C公共库至其他平台。
+
+本文档不会特定介绍哪一个具体的平台移植方案，是一个通用的移植方案。
+
+参考
+
+规范
+•	tickcounter adapter specification
+•	agenttime adapter specification
+•	threadapi and sleep adapter specification
+•	platform adapter specification
+•	tlsio specification
+•	xio specification
+•	lock adapter specification
+
+ 头文件列表
+•	tickcounter.h
+•	threadapi.h
+•	xio.h
+•	tlsio.h
+•	socketio.h
+•	lock.h
+•	platform.h
+
+
+目录结构
+整体概括
+tickcounter 适配器
+agenttime适配器
+sleep适配器
+platform 适配器
+tlsio adapter 适配器
+socketio 适配器概括(可选)
+tlsio适配器实现
+threadapi and lock适配器(可选)
+
