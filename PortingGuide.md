@@ -46,7 +46,7 @@
 目前这个采用C99标准编写的C公共库可以很方便的移植到大部分平台，其中有几个组件依赖平台的特定资源来实现所需的功能。
 因此，这个C公共库提供PAL（platform abstraction layer）模块来让这个库可以适配到特定平台。下面就是这个模块的整体架构:
 
-![](https://doc.bce.baidu.com/bce-documentation/IOT/iot_practise_IOT_HUB_C01.png)
+![](https://github.com/baidu/iot-edge-c-sdk/blob/master/pictures/porting_arch.png)
 
 必须适配的几个模块如下：
 
@@ -142,7 +142,7 @@ tlsio支持的模式包括两种：直接的，串联的。在直接模式，tls
 串联的tlsio适配器必须调用xio的适配器，这个适配器可以包含一个tcp socket。在百度的IoT SDK里面，xio适配器是通过socketio管理tcp socket。
 
 下面的这个图介绍tls的数据流模型：
-![](https://doc.bce.baidu.com/bce-documentation/IOT/iot_practise_IOT_HUB_C02.png)
+![](https://github.com/baidu/iot-edge-c-sdk/blob/master/pictures/io_chains.png)
 
 ### tlsio适配器实现
 
