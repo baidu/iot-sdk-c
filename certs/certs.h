@@ -27,6 +27,10 @@ extern "C"
 
 extern const char certificates[];
 
+extern const char client_cert[];
+
+extern const char client_key[];
+
 extern const char bos_root_ca[];
 
 #ifdef __cplusplus

@@ -823,6 +823,29 @@ static XIO_HANDLE CreateTlsConnection(const char *endpoint)
     return xio;
 }
 
+static XIO_HANDLE CreateMutualTlsConnection(const char *endpoint)
+{
+    TLSIO_CONFIG tlsio_config = { endpoint, MQTT_CONNECTION_TLS_PORT };
+    // enable wolfssl by set certificates
+    // tlsio_config.certificate = certificates;
+
+    XIO_HANDLE xio = xio_create(platform_get_default_tlsio(), &tlsio_config);
+
+    if (xio_setoption(xio, "TrustedCerts", certificates) != 0)
+    {
+        LOG(AZ_LOG_ERROR, LOG_LINE, "Fail to assign trusted cert chain");
+    }
+    if (xio_setoption(xio, "x509certificate", client_cert) != 0)
+    {
+        LOG(AZ_LOG_ERROR, LOG_LINE, "Fail to assign client cert");
+    }
+    if (xio_setoption(xio, "x509privatekey", client_key) != 0)
+    {
+        LOG(AZ_LOG_ERROR, LOG_LINE, "Fail to assign client private key");
+    }
+    return xio;
+}
+
 static void DisconnectFromClient(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient)
 {
     (void)mqtt_client_disconnect(iotHubClient->mqttClient, NULL, NULL);
@@ -844,6 +867,8 @@ static int SendMqttConnectMessage(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient)
         case MQTT_CONNECTION_TLS:
             iotHubClient->xioTransport = CreateTlsConnection(iotHubClient->endpoint);
             break;
+        case MQTT_CONNECTION_MUTUAL_TLS:
+            iotHubClient->xioTransport = CreateMutualTlsConnection(iotHubClient->endpoint);
     }
 
     if (iotHubClient->xioTransport == NULL)

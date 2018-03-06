@@ -33,6 +33,9 @@
 // The key (password) of mqtt client.
 #define         PASSWORD                    "xxxx"
 
+// The connection type is TLS or MUTUAL_TLS. If MUTUAL_TLS selected certificate and key should be set in 'certs.c'.
+#define         CONNECTION_TYPE              "MUTUAL_TLS"
+
 static const char* TOPIC_NAME_A = "msgA";
 static const char* TOPIC_NAME_B = "msgB";
 
@@ -149,7 +152,17 @@ int iothub_mqtt_client_run(void)
 
         const char *endpoint = ENDPOINT;
 
-        MQTT_CONNECTION_TYPE type = MQTT_CONNECTION_TLS;
+        MQTT_CONNECTION_TYPE type;
+        if (CONNECTION_TYPE == "TLS")
+        {
+             type = MQTT_CONNECTION_TLS;
+        }
+        else if (CONNECTION_TYPE == "MUTUAL_TLS")
+        {
+             type = MQTT_CONNECTION_MUTUAL_TLS;
+        }
+
+
 
         IOTHUB_CLIENT_RETRY_POLICY retryPolicy = IOTHUB_CLIENT_RETRY_EXPONENTIAL_BACKOFF;
 
