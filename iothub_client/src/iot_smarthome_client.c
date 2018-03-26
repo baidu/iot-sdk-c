@@ -231,6 +231,7 @@ static int GetDeviceFromTopic(const char* topic, IOT_SH_CLIENT_HANDLE handle, SH
 
         if (!StringCmp(device, handle->name, 0, strlen(handle->name)) || strlen(device) <= offset) {
             LogError("Invalid SUB topic %s", topic);
+            free(device);
             return -1;
         }
 
