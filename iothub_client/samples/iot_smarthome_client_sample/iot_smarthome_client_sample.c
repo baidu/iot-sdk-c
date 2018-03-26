@@ -35,6 +35,14 @@
 // $endpointName/$puid
 #define         USERNAME            "your_endpoint_name/your_puid"
 
+static char * client_cert = "-----BEGIN CERTIFICATE-----\r\n"
+        "you client cert\r\n"
+        "-----END CERTIFICATE-----\r\n";
+
+static char * client_key = "-----BEGIN RSA PRIVATE KEY-----\r\n"
+        "your client key\r\n"
+        "-----END RSA PRIVATE KEY-----\r\n";
+
 static bool isGateway;
 
 // define your own parameters here
@@ -306,14 +314,7 @@ int iot_smarthome_client_run(bool isGatewayDevice)
     iot_smarthome_client_register_update_documents(handle, HandleUpdateDocuments, handle);
     iot_smarthome_client_register_update_snapshot(handle, HandleUpdateSnapshot, handle);
 
-    IOT_SH_CLIENT_OPTIONS options;
-    options.cleanSession = true;
-    options.clientId = DEVICE;
-    options.username = USERNAME;
-    options.keepAliveInterval = 5;
-    options.retryTimeoutInSeconds = 300;
-
-    if (0 != iot_smarthome_client_connect(handle, &options))
+    if (0 != iot_smarthome_client_connect(handle, USERNAME, DEVICE, client_cert, client_key))
     {
         iot_smarthome_client_deinit(handle);
         Log("iot_smarthome_client_connect failed");

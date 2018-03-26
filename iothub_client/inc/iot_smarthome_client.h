@@ -49,12 +49,16 @@ typedef struct IOT_SH_CLIENT_OPTIONS_TAG
     // Timeout for publishing device request in seconds.
     size_t retryTimeoutInSeconds;
 
+    char* client_cert;
+    char* client_key;
+
 } IOT_SH_CLIENT_OPTIONS; 
 
 MOCKABLE_FUNCTION(, IOT_SH_CLIENT_HANDLE, iot_smarthome_client_init, bool, isGatewayDevice);
 MOCKABLE_FUNCTION(, void, iot_smarthome_client_deinit, IOT_SH_CLIENT_HANDLE, handle);
 
-MOCKABLE_FUNCTION(, int, iot_smarthome_client_connect, IOT_SH_CLIENT_HANDLE, handle, const IOT_SH_CLIENT_OPTIONS*, options);
+MOCKABLE_FUNCTION(, int, iot_smarthome_client_connect, IOT_SH_CLIENT_HANDLE, handle, const char*, username, const char*, deviceId,
+                    const char*, client_cert, const char*, client_key);
 
 MOCKABLE_FUNCTION(, void, iot_smarthome_client_register_delta, IOT_SH_CLIENT_HANDLE, handle, SHADOW_DELTA_CALLBACK, callback, void*, callbackContext);
 MOCKABLE_FUNCTION(, void, iot_smarthome_client_register_get_accepted, IOT_SH_CLIENT_HANDLE, handle, SHADOW_ACCEPTED_CALLBACK, callback, void*, callbackContext);

@@ -94,16 +94,6 @@ typedef struct IOT_SH_CLIENT_TAG
     bool isGateway;
 } IOT_SH_CLIENT;
 
-static size_t StringLength(const char* string)
-{
-    if (NULL == string) return 0;
-    
-    size_t index = 0;
-    while ('\0' != string[index++]) {}
-
-    return index - 1;
-}
-
 static bool StringCmp(const char* src, const char* des, size_t head, size_t end)
 {
     if (NULL == src && NULL == des) return true;
@@ -126,17 +116,17 @@ static void StringCpy(char* des, const char* src, size_t head, size_t end)
     }
 }
 
-static char* GenerateTopic(const char* formate, const char* device)
+static char* GenerateTopic(const char* format, const char* device)
 {
-    if (NULL == formate || NULL == device)
+    if (NULL == format || NULL == device)
     {
-        LogError("Failure: both formate and device should not be NULL.");
+        LogError("Failure: both format and device should not be NULL.");
         return NULL;
     }
-    size_t size = StringLength(formate) + StringLength(device) + 1;
+    size_t size = strlen(format) + strlen(device) + 1;
     char* topic = malloc(sizeof(char) * size);
     if (NULL == topic) return NULL;
-    if (sprintf_s(topic, size, formate, device) < 0)
+    if (sprintf_s(topic, size, format, device) < 0)
     {
         free(topic);
         topic = NULL;
@@ -146,11 +136,19 @@ static char* GenerateTopic(const char* formate, const char* device)
 }
 
 static const char* GenerateGatewaySubdevicePubObject(const char* gateway, const char* subdevice) {
-    STRING_HANDLE stringHandle = STRING_construct_sprintf(GATEWAY_SUBDEVICE_PUB_OBJECT, gateway, subdevice);
-    if (stringHandle == NULL) {
-        LogError("fail to generate $gateway/subdevice/$device string");
+    if (NULL == gateway || NULL == subdevice) {
+        LogError("Failure: gateway or subdevice is NULL");
+        return NULL;
     }
-    return STRING_c_str(stringHandle);
+    size_t size = strlen(GATEWAY_SUBDEVICE_PUB_OBJECT) + strlen(gateway) + strlen(subdevice) - 3;
+    char* result = malloc(sizeof(char) * size);
+    if (NULL == result) return NULL;
+    if (sprintf_s(result, size, GATEWAY_SUBDEVICE_PUB_OBJECT, gateway, subdevice) < 0)
+    {
+        free(result);
+        result = NULL;
+    }
+    return result;
 }
 
 /**
@@ -161,49 +159,49 @@ static int GetDeviceFromTopic(const char* topic, IOT_SH_CLIENT_HANDLE handle, SH
 {
     char* prefix = TOPIC_PREFIX;
 
-    size_t prefixLength = StringLength(prefix);
+    size_t prefixLength = strlen(prefix);
     if (false == StringCmp(prefix, topic, 0, prefixLength))
     {
         LogError("Failure: the topic prefix is illegal.");
         return -1;
     }
-    size_t topicLength = StringLength(topic);
+    size_t topicLength = strlen(topic);
 
     size_t head = prefixLength;
     size_t end, tmp;
 
     // TODO: support more topics for subscription handle.
-    if (StringCmp(TOPIC_SUFFIX_DELTA, topic, tmp = topicLength - StringLength(TOPIC_SUFFIX_DELTA), topicLength + 1))
+    if (StringCmp(TOPIC_SUFFIX_DELTA, topic, tmp = topicLength - strlen(TOPIC_SUFFIX_DELTA), topicLength + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_DELTA;
         end = tmp - 1;
     }
-    else if (StringCmp(TOPIC_SUFFIX_GET_ACCEPTED, topic, tmp = topicLength - StringLength(TOPIC_SUFFIX_GET_ACCEPTED), topicLength + 1))
+    else if (StringCmp(TOPIC_SUFFIX_GET_ACCEPTED, topic, tmp = topicLength - strlen(TOPIC_SUFFIX_GET_ACCEPTED), topicLength + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_GET_ACCEPTED;
         end = tmp - 1;
     }
-    else if (StringCmp(TOPIC_SUFFIX_GET_REJECTED, topic, tmp = topicLength - StringLength(TOPIC_SUFFIX_GET_REJECTED), topicLength + 1))
+    else if (StringCmp(TOPIC_SUFFIX_GET_REJECTED, topic, tmp = topicLength - strlen(TOPIC_SUFFIX_GET_REJECTED), topicLength + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_GET_REJECTED;
         end = tmp - 1;
     }
-    else if (StringCmp(TOPIC_SUFFIX_UPDATE_ACCETPED, topic, tmp = topicLength - StringLength(TOPIC_SUFFIX_UPDATE_ACCETPED), topicLength + 1))
+    else if (StringCmp(TOPIC_SUFFIX_UPDATE_ACCETPED, topic, tmp = topicLength - strlen(TOPIC_SUFFIX_UPDATE_ACCETPED), topicLength + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_UPDATE_ACCEPTED;
         end = tmp - 1;
     }
-    else if (StringCmp(TOPIC_SUFFIX_UPDATE_REJECTED, topic, tmp = topicLength - StringLength(TOPIC_SUFFIX_UPDATE_REJECTED), topicLength + 1))
+    else if (StringCmp(TOPIC_SUFFIX_UPDATE_REJECTED, topic, tmp = topicLength - strlen(TOPIC_SUFFIX_UPDATE_REJECTED), topicLength + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_UPDATE_REJECTED;
         end = tmp - 1;
     }
-    else if (StringCmp(TOPIC_SUFFIX_UPDATE_DOCUMENTS, topic, tmp = topicLength - StringLength(TOPIC_SUFFIX_UPDATE_DOCUMENTS), topicLength + 1))
+    else if (StringCmp(TOPIC_SUFFIX_UPDATE_DOCUMENTS, topic, tmp = topicLength - strlen(TOPIC_SUFFIX_UPDATE_DOCUMENTS), topicLength + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_UPDATE_DOCUMENTS;
         end = tmp - 1;
     }
-    else if (StringCmp(TOPIC_SUFFIX_UPDATE_SNAPSHOT, topic, tmp = topicLength - StringLength(TOPIC_SUFFIX_UPDATE_SNAPSHOT), topicLength + 1))
+    else if (StringCmp(TOPIC_SUFFIX_UPDATE_SNAPSHOT, topic, tmp = topicLength - strlen(TOPIC_SUFFIX_UPDATE_SNAPSHOT), topicLength + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_UPDATE_SNAPSHOT;
         end = tmp - 1;
@@ -236,11 +234,14 @@ static int GetDeviceFromTopic(const char* topic, IOT_SH_CLIENT_HANDLE handle, SH
             return -1;
         }
 
-        STRING_HANDLE stringHandle = STRING_new();
-        STRING_copy_n(stringHandle, device + offset, strlen(device) - offset);
+        size_t len = strlen(device) - offset + 1;
+        char* subdevice = malloc(sizeof(char) * len);
+        strcpy_s(subdevice, strlen(device) - offset, device + offset);
         messageContext->device = handle->name;
-        messageContext->subdevice = (char *) STRING_c_str(stringHandle);
+        messageContext->subdevice = subdevice;
+        free(device);
     }
+
     return 0;
 }
 
@@ -484,6 +485,8 @@ static void InitIotHubClient(IOT_SH_CLIENT_HANDLE handle, const IOT_SH_CLIENT_OP
         OnRecvCallback,
         IOTHUB_CLIENT_RETRY_EXPONENTIAL_BACKOFF_WITH_JITTER,
         options->retryTimeoutInSeconds < 300 ? 300 : options->retryTimeoutInSeconds);
+    handle->mqttClient->client_cert = options->client_cert;
+    handle->mqttClient->client_key = options->client_key;
 }
 
 static void ResetIotDmClient(IOT_SH_CLIENT_HANDLE handle)
@@ -532,7 +535,7 @@ static int SendRequest(const IOT_SH_CLIENT_HANDLE handle, char* topic, JSON_Valu
         }
         else
         {
-            result = publish_mqtt_message(handle->mqttClient, topic, DELIVER_AT_LEAST_ONCE, (uint8_t*)encoded, StringLength(encoded), NULL, NULL);
+            result = publish_mqtt_message(handle->mqttClient, topic, DELIVER_AT_LEAST_ONCE, (uint8_t*)encoded, strlen(encoded), NULL, NULL);
             json_free_serialized_string(encoded);
         }
     }
@@ -656,32 +659,38 @@ void iot_smarthome_client_deinit(IOT_SH_CLIENT_HANDLE handle)
         }
 
         iothub_mqtt_destroy(handle->mqttClient);
-        if (NULL != handle->endpoint)
-        {
-            free(handle->endpoint);
-        }
 
         ResetIotDmClient(handle);
         free(handle);
     }
 }
 
-int iot_smarthome_client_connect(IOT_SH_CLIENT_HANDLE handle, const IOT_SH_CLIENT_OPTIONS *options)
+int iot_smarthome_client_connect(IOT_SH_CLIENT_HANDLE handle, const char* username, const char* deviceId,
+                                 const char* client_cert, const char* client_key)
 {
+    IOT_SH_CLIENT_OPTIONS options;
+    options.cleanSession = true;
+    options.clientId = (char *) deviceId;
+    options.username = (char *) username;
+    options.keepAliveInterval = 5;
+    options.retryTimeoutInSeconds = 300;
+    options.client_cert = (char *) client_cert;
+    options.client_key = (char *) client_key;
+
     if (NULL == handle)
     {
         LogError("IOT_SH_CLIENT_HANDLE handle should not be NULL.");
         return __FAILURE__;
     }
-    if (NULL == options || NULL == options->username || NULL == options->password)
+    if ( NULL == options.username || NULL == options.client_cert || NULL == options.client_key )
     {
-        LogError("Failure: the username and password in options should not be NULL.");
+        LogError("Failure: the username, cert, cert_key in options should not be NULL.");
         return __FAILURE__;
     }
 
-    handle->name = options->clientId;
+    handle->name = options.clientId;
 
-    InitIotHubClient(handle, options);
+    InitIotHubClient(handle, &options);
     if (NULL == handle->mqttClient)
     {
         LogError("Failure: cannot initialize the mqtt connection.");

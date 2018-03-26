@@ -33,54 +33,8 @@ iot_smarthome_client基于mqtt协议连接到设备管理平台云端。他可�
 
 如果是网关代理子设备的场景，需要先激活网关，然后再使用子设备信息+已激活网关的信息去激活子设备后，网关方可启用对该子设备的代理功能。网关本身的激活同普通设备的激活。
 
-### 2. 提供证书 ###
-请在certs/certs.c中填入设备对应的证书。注意由于网关子设备没有运行本sdk直连云端的能力，因此网关子设备没有也不需要证书。
-```
 
-// add your client cert of the principal
-const char client_cert[] =
-"-----BEGIN CERTIFICATE-----\r\n"
-"xxx\r\n"
-"iQpKE+U/T/BwRsXzm1IKpLgkZd7DJvwXaIxc/GVM\r\n"
-"-----END CERTIFICATE-----\r\n"
-;
-
-// add your client private key of the principal
-const char client_key[] =
-"-----BEGIN RSA PRIVATE KEY-----\r\n"
-"xxx\r\n"
-"fx5g5WWdYvuI6LoEwq2RXVNQRC+i9YtABk+b970G0XA=\r\n"
-"-----END RSA PRIVATE KEY-----\r\n"
-;
-```
-或者在iothub_mqtt_client.c中替换掉相应的client_cert和client_key
-```
-static XIO_HANDLE CreateMutualTlsConnection(const char *endpoint)
-{
-    TLSIO_CONFIG tlsio_config = { endpoint, MQTT_CONNECTION_TLS_PORT };
-    // enable wolfssl by set certificates
-    // tlsio_config.certificate = certificates;
-
-    XIO_HANDLE xio = xio_create(platform_get_default_tlsio(), &tlsio_config);
-
-    if (xio_setoption(xio, "TrustedCerts", certificates) != 0)
-    {
-        LOG(AZ_LOG_ERROR, LOG_LINE, "Fail to assign trusted cert chain");
-    }
-    if (xio_setoption(xio, "x509certificate", client_cert) != 0)   // replace client_cert
-    {
-        LOG(AZ_LOG_ERROR, LOG_LINE, "Fail to assign client cert");
-    }
-    if (xio_setoption(xio, "x509privatekey", client_key) != 0)   // replace client_key
-    {
-        LOG(AZ_LOG_ERROR, LOG_LINE, "Fail to assign client private key");
-    }
-    return xio;
-}
-```
-
-
-### 3. 定义一个smarthome_client ###
+### 2. 定义一个smarthome_client ###
 完成准备工作以后，即可创建smarthome_client准备与云端连接。
 
 创建client的代码如下，isGatewayDevice是一个布尔值，标志该设备是否为网关。
@@ -146,22 +100,29 @@ static void HandleDelta(const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON
 }
 ```
 
-### 4. 连接到云端 ###
-DEVICE是设备PUID，USERNAME是endpointName/PUID。这些信息加上前面步骤中设置的证书，可以成功与云端建立mqtt连接。
+### 3. 连接到云端 ###
+DEVICE是设备PUID，USERNAME是endpointName/PUID, client_cert/client_key分别是设备的证书和私钥，通过这些信息可以成功与云端建立mqtt连接。
 
 ```
-IOT_SH_CLIENT_OPTIONS options;
-options.cleanSession = true;
-options.clientId = DEVICE;  // your $PUID
-options.username = USERNAME;  // $endpointName/$PUID
-options.keepAliveInterval = 5;
-options.retryTimeoutInSeconds = 300;
+// $puid
+#define         DEVICE              "your_puid"
 
-iot_smarthome_client_connect(handle, &options);
+// $endpointName/$puid
+#define         USERNAME            "your_endpoint_name/your_puid"
+
+static char * client_cert = "-----BEGIN CERTIFICATE-----\r\n"
+        "you client cert\r\n"
+        "-----END CERTIFICATE-----\r\n";
+
+static char * client_key = "-----BEGIN RSA PRIVATE KEY-----\r\n"
+        "your client key\r\n"
+        "-----END RSA PRIVATE KEY-----\r\n";
+        
+iot_smarthome_client_connect(handle, USERNAME, DEVICE, client_cert, client_key);
 ```
 
-### 5. 监听云端指令 ###
-创建一个循环始终监听云端指令，当有信息下发时，步骤3中注册的相应回调函数将会被触发。
+### 4. 监听云端指令 ###
+创建一个循环始终监听云端指令，当有信息下发时，步骤2中注册的相应回调函数将会被触发。
 ```
 while (iot_smarthome_client_dowork(handle) >= 0)
 {
@@ -169,7 +130,7 @@ while (iot_smarthome_client_dowork(handle) >= 0)
 }
 ```
 
-### 6. 向云端发布信息 ###
+### 5. 向云端发布信息 ###
 普通设备（包括网关设备发布自身信息而非代理子设备被信息的场景）向云端发布信息可使用如下接口：
 ```
 // 获取设备云端状态信息
