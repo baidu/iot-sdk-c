@@ -17,11 +17,12 @@
 * limitations under the License.
 */
 
-
-#include "iotdm_client_sample.h"
+#include <stdbool.h>
+#include "iot_smarthome_client_sample.h"
 
 int main(void)
 {
-    iotdm_client_run();
+    bool isGatewayDevice = false;
+    iot_smarthome_client_run(isGatewayDevice);
     return 0;
 }
