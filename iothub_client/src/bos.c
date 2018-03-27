@@ -26,6 +26,9 @@
 #include "bos.h"
 #include "http_signer.h"
 
+#define RANGE               "Range"
+#define CONTENT_RANGE       "Content-Range"
+
 static BOS_RESULT BOS_UploadDownload(HTTPAPI_REQUEST_TYPE requestType, const char *server, const char *ak, const char *sk, const char *bucket, const char *objectKey, BUFFER_HANDLE requestBuffer, unsigned int *httpStatus, BUFFER_HANDLE httpResponse);
 
 BOS_RESULT BOS_Upload(const char *server, const char *ak, const char *sk, const char *bucket, const char *objectKey, const unsigned char *source, size_t size, unsigned int *httpStatus, BUFFER_HANDLE httpResponse)
@@ -144,3 +147,143 @@ BOS_RESULT BOS_UploadDownload(HTTPAPI_REQUEST_TYPE requestType, const char *serv
     return result;
 }
 
+static BOS_RESULT Bos_Build_Range_Header(const BOS_RANGE* range, HTTP_HEADERS_HANDLE* handle)
+{
+    BOS_RESULT result = BOS_OK;
+
+    HTTP_HEADERS_HANDLE requestHttpHeaders = NULL;
+    STRING_HANDLE rangeHeaderValue = NULL;
+    if (range != NULL)
+    {
+        requestHttpHeaders = HTTPHeaders_Alloc();
+        if (requestHttpHeaders == NULL)
+        {
+            LogError("unable to HTTPHeaders_Alloc");
+            result = BOS_ERROR;
+        }
+        else
+        {
+            rangeHeaderValue = STRING_new();
+            if (rangeHeaderValue == NULL)
+            {
+                result = BOS_ERROR;
+            }
+            else
+            {
+                if (0 != STRING_sprintf(rangeHeaderValue, "bytes=%ld-%ld", range->start, range->end))
+                {
+                    result = BOS_ERROR;
+                }
+                else
+                {
+                    if (HTTP_HEADERS_OK != HTTPHeaders_AddHeaderNameValuePair(requestHttpHeaders, RANGE,  STRING_c_str(rangeHeaderValue)))
+                    {
+                        result = BOS_ERROR;
+                    }
+                    else
+                    {
+                        *handle = requestHttpHeaders;
+                    }
+                }
+                STRING_delete(rangeHeaderValue);
+            }
+        }
+        if (result != BOS_OK)
+        {
+            if (rangeHeaderValue != NULL)
+            {
+                STRING_delete(rangeHeaderValue);
+            }
+            if (requestHttpHeaders != NULL)
+            {
+                HTTPHeaders_Free(requestHttpHeaders);
+            }
+        }
+        else
+        {
+            *handle = requestHttpHeaders;
+        }
+        return result;
+    }
+    else
+    {
+        *handle = NULL;
+    }
+}
+
+BOS_RESULT BOS_Download_Presigned(const char* url, BOS_RANGE* range, BOS_CONTENT_RANGE* contentRange, unsigned int* httpStatus, BUFFER_HANDLE httpResponse)
+{
+    BOS_RESULT result = BOS_ERROR;
+    char protocol[10];
+    char server[100];
+    char *relativePath = malloc(strlen(url));
+    if (relativePath == NULL)
+    {
+        LogError("malloc failed");
+        return BOS_ERROR;
+    }
+    relativePath[0] = '/';
+    memset(server, '\0', 100);
+    memset(protocol, '\0', 10);
+    int matched = sscanf(url, "%99[^:]://%99[^/]/%s[\n]", protocol, server, relativePath + 1);
+        
+    if (matched != 3)
+    {
+        LogError("unable to parse url %s", url);
+    }
+    else 
+    {
+        HTTPAPIEX_HANDLE httpApiExHandle = HTTPAPIEX_Create(server);
+        HTTP_HEADERS_HANDLE responseHeaders = HTTPHeaders_Alloc();
+        if (httpApiExHandle == NULL || responseHeaders == NULL) {
+            LogError("unable to create HTTPAPIEX_HANDLE");
+        }
+        else
+        {
+            HTTP_HEADERS_HANDLE requestHttpHeaders = NULL;
+            if (range != NULL && Bos_Build_Range_Header(range, &requestHttpHeaders) != BOS_OK)
+            {
+                LogError("unable to build headers");
+            }
+            else
+            {
+                if ((HTTPAPIEX_SetOption(httpApiExHandle, "TrustedCerts", bos_root_ca) == HTTPAPIEX_ERROR)) {
+                    LogError("failure in setting trusted certificates");
+                } else {
+                    if (HTTPAPIEX_OK !=
+                        HTTPAPIEX_ExecuteRequest(httpApiExHandle, HTTPAPI_REQUEST_GET, relativePath,
+                                                 requestHttpHeaders, NULL,
+                                                 httpStatus,
+                                                 responseHeaders, httpResponse)) {
+                        LogError("failed to HTTPAPIEX_ExecuteRequest");
+                        result = BOS_HTTP_ERROR;
+                    } else {
+                        if (contentRange != NULL)
+                        {
+                            const char *contentRangeStr = HTTPHeaders_FindHeaderValue(responseHeaders, CONTENT_RANGE);
+                            matched = sscanf(contentRangeStr, "bytes %ld-%ld/%ld", &(contentRange->start), &(contentRange->end), &(contentRange->totalLength));
+                            if (matched != 3)
+                            {
+                                LogError("unable to parse Content-Range");
+                                result = BOS_ERROR;
+                            }
+                            else
+                            {
+                                result = BOS_OK;
+                            }
+                        }
+                        else
+                        {
+                            result = BOS_OK;
+                        }
+                    }
+                }
+            }
+            HTTPHeaders_Free(requestHttpHeaders);
+        }
+        HTTPAPIEX_Destroy(httpApiExHandle);
+        HTTPHeaders_Free(responseHeaders);
+    }
+    free(relativePath);
+    return result;
+}
