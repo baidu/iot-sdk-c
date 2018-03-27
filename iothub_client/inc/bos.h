@@ -45,6 +45,19 @@ DEFINE_ENUM(BOS_RESULT, BOS_RESULT_VALUES)
 
 #define IS_SUCCESS_STATUS(code) ((code) >= 200 && (code) < 300)
 
+typedef struct BOS_RANGE_TAG
+{
+    long start; /* include */
+    long end; /* include */
+} BOS_RANGE;
+
+typedef struct BOS_CONTENT_RANGE_TAG
+{
+    long start; /* include */
+    long end; /* include */
+    long totalLength;
+} BOS_CONTENT_RANGE;
+
 /**
 * @brief	Synchronously uploads a byte array to BOS
 *
@@ -81,12 +94,14 @@ MOCKABLE_FUNCTION(, BOS_RESULT, BOS_Download, const char*, host, const char *, a
 * @brief	Synchronously download an pre-signed url from BOS. AK/SK not required for pre-signed URL.
 *
 * @param	url		        A pre-signed BOS URL.
+* @param    range           Specify range of the file to return. Optional. By default return all data of the file.
+* @param    contentRange    A pointer to an out argument receiving the Content-Range header of the response. It has the total length of the file.
 * @param    httpStatus      A pointer to an out argument receiving the HTTP status (available only when the return value is BOS_OK)
 * @param    httpResponse    A BUFFER_HANDLE that receives the HTTP response from the server (available only when the return value is BOS_OK). Actual content of the BOS object is in it.
 *
 * @return	A @c BOS_RESULT.  BOS_OK means the object has been uploaded successfully. Any other value indicates an error
 */
-MOCKABLE_FUNCTION(, BOS_RESULT, BOS_Download_Presigned, const char*, url, unsigned int*, httpStatus, BUFFER_HANDLE, httpResponse)
+MOCKABLE_FUNCTION(, BOS_RESULT, BOS_Download_Presigned, const char*, url, BOS_RANGE*, range, BOS_CONTENT_RANGE*, contentRange, unsigned int*, httpStatus, BUFFER_HANDLE, httpResponse)
 
 #ifdef __cplusplus
 }
