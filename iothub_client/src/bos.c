@@ -144,3 +144,42 @@ BOS_RESULT BOS_UploadDownload(HTTPAPI_REQUEST_TYPE requestType, const char *serv
     return result;
 }
 
+BOS_RESULT BOS_Download_Presigned(const char* url, unsigned int* httpStatus, BUFFER_HANDLE httpResponse)
+{
+    BOS_RESULT result = BOS_ERROR;
+    char protocol[10];
+    char server[100];
+    char *relativePath = malloc(strlen(url));
+    relativePath[0] = '/';
+    memset(server, '\0', 100);
+    memset(protocol, '\0', 10);
+    int matched = sscanf(url, "%99[^:]://%99[^/]/%s[\n]", protocol, server, relativePath + 1);
+        
+    if (matched != 3)
+    {
+        LogError("unable to parse url %s", url);
+    }
+    else 
+    {
+        HTTPAPIEX_HANDLE httpApiExHandle = HTTPAPIEX_Create(server);
+        if (httpApiExHandle == NULL) {
+            LogError("unable to create HTTPAPIEX_HANDLE");
+        } else {
+            if ((HTTPAPIEX_SetOption(httpApiExHandle, "TrustedCerts", bos_root_ca) == HTTPAPIEX_ERROR)) {
+                LogError("failure in setting trusted certificates");
+            } else {
+                if (HTTPAPIEX_OK !=
+                    HTTPAPIEX_ExecuteRequest(httpApiExHandle, HTTPAPI_REQUEST_GET, relativePath, NULL, NULL, httpStatus,
+                                             NULL, httpResponse)) {
+                    LogError("failed to HTTPAPIEX_ExecuteRequest");
+                    result = BOS_HTTP_ERROR;
+                } else {
+                    result = BOS_OK;
+                }
+            }
+            HTTPAPIEX_Destroy(httpApiExHandle);
+        }
+    }
+    free(relativePath);
+    return result;
+}

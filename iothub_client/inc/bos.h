@@ -77,6 +77,17 @@ MOCKABLE_FUNCTION(, BOS_RESULT, BOS_Upload, const char*, host, const char *, ak,
 */
 MOCKABLE_FUNCTION(, BOS_RESULT, BOS_Download, const char*, host, const char *, ak, const char *, sk, const char *, bucket, const char *, objectKey, unsigned int*, httpStatus, BUFFER_HANDLE, httpResponse)
 
+/**
+* @brief	Synchronously download an pre-signed url from BOS. AK/SK not required for pre-signed URL.
+*
+* @param	url		        A pre-signed BOS URL.
+* @param    httpStatus      A pointer to an out argument receiving the HTTP status (available only when the return value is BOS_OK)
+* @param    httpResponse    A BUFFER_HANDLE that receives the HTTP response from the server (available only when the return value is BOS_OK). Actual content of the BOS object is in it.
+*
+* @return	A @c BOS_RESULT.  BOS_OK means the object has been uploaded successfully. Any other value indicates an error
+*/
+MOCKABLE_FUNCTION(, BOS_RESULT, BOS_Download_Presigned, const char*, url, unsigned int*, httpStatus, BUFFER_HANDLE, httpResponse)
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

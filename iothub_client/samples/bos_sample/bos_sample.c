@@ -36,6 +36,8 @@
 
 #define         SK                              "xxx"
 
+#define         BOS_PRESIGNED_URL               "http://iot-ota.gz.bcebos.com/root_cert.pem?authorization=bce-auth-v1%2F7c07b0e64afd49208674b293e419106c%2F2018-03-26T05%3A55%3A10Z%2F-1%2Fhost%2F7c5a2fc04c66b0ccbd9da2a897c71999832a924a5cd17232fea42803bfb98959"
+
 int bos_run_upload(void)
 {
     size_t bufferSize = 2;
@@ -77,6 +79,23 @@ int bos_run_download(void)
     }
 }
 
+int bos_run_download_presigned(void)
+{
+    unsigned int httpStatus;
+    BUFFER_HANDLE response = BUFFER_new();
+    BOS_RESULT result = BOS_Download_Presigned(BOS_PRESIGNED_URL, &httpStatus, response);
+    LogInfo("Download finished. result = %d, httpStatus=%d, content size=%d.", result, httpStatus, BUFFER_length(response));
+    if (!IS_SUCCESS_STATUS(httpStatus))
+    {
+        LogError("failure in BOS_Download_Presigned");
+        return __FAILURE__;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
 int bos_run(void)
 {
     if (platform_init() != 0)
@@ -86,6 +105,10 @@ int bos_run(void)
     }
     else
     {
+        if (0 != bos_run_download_presigned())
+        {
+            return __FAILURE__;
+        }
         if (0 != bos_run_upload() || 0 != bos_run_download())
         {
             return __FAILURE__;
