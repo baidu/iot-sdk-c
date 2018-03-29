@@ -35,6 +35,9 @@
 // $endpointName/$puid
 #define         USERNAME            "your_endpoint_name/your_puid"
 
+// if your device is a gateway, you can add subdevice puids here
+#define         SUBDEVICE           "your_gateway_subdevice_puid"
+
 static char * client_cert = "-----BEGIN CERTIFICATE-----\r\n"
         "you client cert\r\n"
         "-----END CERTIFICATE-----\r\n";
@@ -270,7 +273,9 @@ static void HandleDelta(const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON
 
     ThreadAPI_Sleep(10);
     IOT_SH_CLIENT_HANDLE handle = (IOT_SH_CLIENT_HANDLE)callbackContext;
-    int result = iot_smarthome_client_update_shadow(handle, messageContext->device, messageContext->requestId, 0, value, NULL);
+    int result = messageContext->subdevice == NULL
+                 ? iot_smarthome_client_update_shadow(handle, messageContext->device, messageContext->requestId, 0, value, NULL)
+                 : iot_smarthome_client_update_subdevice_shadow(handle, messageContext->device, messageContext->subdevice, messageContext->requestId, 0, value, NULL);
     if (0 == result)
     {
         Log("Have done for the device controller request, and corresponding shadow is updated.");
@@ -325,7 +330,9 @@ int iot_smarthome_client_run(bool isGatewayDevice)
     iot_smarthome_client_dowork(handle);
 
     // Sample: get device shadow
-    if (0 == iot_smarthome_client_get_shadow(handle, DEVICE, "123456789"))
+    int result = isGateway ? iot_smarthome_client_get_subdevice_shadow(handle, DEVICE, SUBDEVICE, "123456789")
+                           : iot_smarthome_client_get_shadow(handle, DEVICE, "123456789");
+    if (0 == result)
     {
         Log("Succeeded to get device shadow");
     }
@@ -361,7 +368,10 @@ int iot_smarthome_client_run(bool isGatewayDevice)
             reportedString[index] = reported[index];
         }
 
-        if (0 == iot_smarthome_client_update_shadow_with_binary(handle, DEVICE, "123456", 0, reportedString, NULL))
+        result = isGatewayDevice
+                 ? iot_smarthome_client_update_subdevice_shadow_with_binary(handle, DEVICE, SUBDEVICE, "123456", 0, reportedString, NULL)
+                : iot_smarthome_client_update_shadow_with_binary(handle, DEVICE, "123456", 0, reportedString, NULL);
+        if (0 == result)
         {
             Log("Succeeded to update device shadow with binary");
         }
@@ -371,7 +381,9 @@ int iot_smarthome_client_run(bool isGatewayDevice)
         }
 
         // Sample: update shadow with incorrect version, and receive error message at 'update/rejected'.
-        if (0 == iot_smarthome_client_update_shadow_with_binary(handle, DEVICE, "111111", 1, reportedString, NULL))
+        result = isGateway ? iot_smarthome_client_update_subdevice_shadow_with_binary(handle, DEVICE, SUBDEVICE, "111111", 1, reportedString, NULL)
+                           : iot_smarthome_client_update_shadow_with_binary(handle, DEVICE, "111111", 1, reportedString, NULL);
+        if (0 == result)
         {
             Log("Succeeded to send message for updating device shadow with binary");
         }
