@@ -18,7 +18,6 @@
 */
 
 #include <azure_c_shared_utility/xlogging.h>
-#include <azure_c_shared_utility/strings.h>
 #include "iot_smarthome_client.h"
 #include "iothub_mqtt_client.h"
 
@@ -157,6 +156,9 @@ static const char* GenerateGatewaySubdevicePubObject(const char* gateway, const 
  */
 static int GetDeviceFromTopic(const char* topic, IOT_SH_CLIENT_HANDLE handle, SHADOW_CALLBACK_TYPE* type, SHADOW_MESSAGE_CONTEXT* messageContext)
 {
+    messageContext->device = NULL;
+    messageContext->subdevice = NULL;
+
     char* prefix = TOPIC_PREFIX;
 
     size_t prefixLength = strlen(prefix);
@@ -224,6 +226,7 @@ static int GetDeviceFromTopic(const char* topic, IOT_SH_CLIENT_HANDLE handle, SH
 
     if (strlen(device) == strlen(handle->name) && StringCmp(device, handle->name, 0, strlen(device))) {
         messageContext->device = device;
+        messageContext->subdevice = NULL;
     }
     else {
         // device should be in format of "$gateway/subdevice/%s"
@@ -237,8 +240,16 @@ static int GetDeviceFromTopic(const char* topic, IOT_SH_CLIENT_HANDLE handle, SH
 
         size_t len = strlen(device) - offset + 1;
         char* subdevice = malloc(sizeof(char) * len);
-        strcpy_s(subdevice, strlen(device) - offset, device + offset);
-        messageContext->device = handle->name;
+        size_t size = strlen(device) - offset;
+        memcpy(subdevice, device + offset, size);
+        subdevice[len - 1] = '\0';
+
+        size_t gatewayLen = strlen(handle->name);
+        char* gateway = malloc(gatewayLen + 1);
+        memcpy(gateway, handle->name, gatewayLen);
+        gateway[gatewayLen] = '\0';
+
+        messageContext->device = gateway;
         messageContext->subdevice = subdevice;
         free(device);
     }
