@@ -209,6 +209,8 @@ static BOS_RESULT Bos_Build_Range_Header(const BOS_RANGE* range, HTTP_HEADERS_HA
     {
         *handle = NULL;
     }
+
+    return result;
 }
 
 BOS_RESULT BOS_Download_Presigned(const char* url, BOS_RANGE* range, BOS_CONTENT_RANGE* contentRange, unsigned int* httpStatus, BUFFER_HANDLE httpResponse)
