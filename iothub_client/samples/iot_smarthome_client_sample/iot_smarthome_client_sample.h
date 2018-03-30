@@ -25,7 +25,6 @@ extern "C" {
 #endif
 
 int iot_smarthome_client_run(bool isGatewayDevice);
-int iot_smarthome_client_run_ota(bool isGatewayDevice);
 
 #ifdef __cplusplus
 }

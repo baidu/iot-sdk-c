@@ -71,7 +71,7 @@
 #define     KEY_FIRMWARE_URL                "firmwareUrl"
 
 
-#define     ENDPOINT                        "10.73.203.34"
+#define     ENDPOINT                        "baidu-smarthome.mqtt.iot.gz.baidubce.com"
 
 #define     METHOD_GET_FIRMWARE             "getFirmware"
 #define     METHOD_REPORT_FIRMWARE_UPDATE_RESULT    "reportFirmwareUpdateResult"
