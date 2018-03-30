@@ -98,11 +98,13 @@ static void LogAcceptedMessage(const SHADOW_ACCEPTED* accepted)
     char* encoded = json_serialize_to_string(value);
     Log("Reported:");
     Log(encoded);
+    json_free_serialized_string(encoded);
 
     value = json_object_get_wrapping_value(accepted->desired);
     encoded = json_serialize_to_string(value);
     Log("Desired:");
     Log(encoded);
+    json_free_serialized_string(encoded);
 
     value = json_object_get_wrapping_value(accepted->lastUpdateTime);
     encoded = json_serialize_to_string(value);
@@ -342,6 +344,7 @@ int iot_smarthome_client_run(bool isGatewayDevice)
     iot_smarthome_client_dowork(handle);
 
     // Start OTA pulling
+    LogInfo("Starting OTA pulling");
     THREAD_HANDLE otaPullingThread = NULL;
     if (0 != ThreadAPI_Create(&otaPullingThread, pull_ota, handle)) {
         LogError("Failed to create thread");
@@ -424,6 +427,7 @@ int iot_smarthome_client_run(bool isGatewayDevice)
     }
 
     // Stop OTA pulling
+    LogInfo("Stopping OTA pulling");
     stopOtaPulling = true;
     int res;
     ThreadAPI_Join(otaPullingThread, &res);

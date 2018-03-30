@@ -155,7 +155,7 @@ static char* GenerateTopic(const char* format, const char* device)
     return topic;
 }
 
-static const char* GenerateGatewaySubdevicePubObject(const char* gateway, const char* subdevice) {
+static char* GenerateGatewaySubdevicePubObject(const char* gateway, const char* subdevice) {
     if (NULL == gateway || NULL == subdevice) {
         LogError("Failure: gateway or subdevice is NULL");
         return NULL;
@@ -439,10 +439,12 @@ static void OnRecvCallbackForMethodResp(const IOT_SH_CLIENT_HANDLE handle, const
                                         const SHADOW_MESSAGE_CONTEXT *msgContext, const JSON_Object *root,
                                         const APP_PAYLOAD* payload)
 {
-    STRING_HANDLE message = STRING_construct_n((const char*) payload->message, payload->length);
-    if (handle != NULL) {
-        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method response:\n%s\n%s", topic, STRING_c_str(message));
-        STRING_delete(message);
+    char *message = malloc(payload->length + 1);
+    if (message != NULL) {
+        strncpy(message, payload->message, payload->length);
+        message[payload->length] = '\0';
+        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method response:\n%s\n%s", topic, message);
+        free(message);
     }
     else
     {
@@ -535,6 +537,7 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
     {
         LogError("Failure: failed to deserialize the payload to json.");
         free(msgContext.device);
+        free(msgContext.subdevice);
         return;
     }
 
@@ -586,6 +589,7 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
     }
 
     free(msgContext.device);
+    free(msgContext.subdevice);
     json_value_free(data);
 }
 
@@ -772,8 +776,9 @@ void iot_smarthome_client_deinit(IOT_SH_CLIENT_HANDLE handle)
         int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, 0, handle->name);
 
         if (handle->isGateway == true) {
-            const char* gatewayOnBehalfOfSubdevices = GenerateTopic(SUB_GATEWAY_WILDCARD, handle->name);
+            char* gatewayOnBehalfOfSubdevices = GenerateTopic(SUB_GATEWAY_WILDCARD, handle->name);
             amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, amount, gatewayOnBehalfOfSubdevices);
+            free(gatewayOnBehalfOfSubdevices);
         }
 
         if (amount < 0)
@@ -800,6 +805,7 @@ int iot_smarthome_client_connect(IOT_SH_CLIENT_HANDLE handle, const char* userna
     options.cleanSession = true;
     options.clientId = (char *) deviceId;
     options.username = (char *) username;
+    options.password = NULL;
     options.keepAliveInterval = 5;
     options.retryTimeoutInSeconds = 300;
     options.client_cert = (char *) client_cert;
@@ -851,7 +857,9 @@ int iot_smarthome_client_dowork(const IOT_SH_CLIENT_HANDLE handle)
         char* topics[topicSize];
         int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, 0, handle->name);
         if (handle->isGateway == true) {
-            amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, amount, GenerateTopic(SUB_GATEWAY_WILDCARD, handle->name));
+            char *subObject = GenerateTopic(SUB_GATEWAY_WILDCARD, handle->name);
+            amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, amount, subObject);
+            free(subObject);
         }
         if (amount < 0)
         {
@@ -940,7 +948,10 @@ int iot_smarthome_client_get_shadow(const IOT_SH_CLIENT_HANDLE handle, const cha
 
 int iot_smarthome_client_get_subdevice_shadow(const IOT_SH_CLIENT_HANDLE handle, const char* gateway, const char* subdevice, const char* requestId)
 {
-    return iot_smarthome_client_get_shadow(handle, GenerateGatewaySubdevicePubObject(gateway, subdevice), requestId);
+    char* pubObject = GenerateGatewaySubdevicePubObject(gateway, subdevice);
+    int result = iot_smarthome_client_get_shadow(handle, pubObject, requestId);
+    free(pubObject);
+    return result;
 }
 
 int iot_smarthome_client_update_desired(const IOT_SH_CLIENT_HANDLE handle, const char* device, const char* requestId, uint32_t version, JSON_Value* desired, JSON_Value* lastUpdatedTime)
@@ -950,7 +961,10 @@ int iot_smarthome_client_update_desired(const IOT_SH_CLIENT_HANDLE handle, const
 
 int iot_smarthome_client_update_subdevice_desired(const IOT_SH_CLIENT_HANDLE handle, const char* gateway, const char* subdevice, const char* requestId, uint32_t version, JSON_Value* desired, JSON_Value* lastUpdatedTime)
 {
-    return iot_smarthome_client_update_desired(handle, GenerateGatewaySubdevicePubObject(gateway, subdevice), requestId, version, desired, lastUpdatedTime);
+    char* pubObject = GenerateGatewaySubdevicePubObject(gateway, subdevice);
+    int result = iot_smarthome_client_update_desired(handle, pubObject, requestId, version, desired, lastUpdatedTime);
+    free(pubObject);
+    return result;
 }
 
 int iot_smarthome_client_update_shadow(const IOT_SH_CLIENT_HANDLE handle, const char* device, const char* requestId, uint32_t version, JSON_Value* reported, JSON_Value* lastUpdatedTime)
@@ -960,7 +974,10 @@ int iot_smarthome_client_update_shadow(const IOT_SH_CLIENT_HANDLE handle, const 
 
 int iot_smarthome_client_update_subdevice_shadow(const IOT_SH_CLIENT_HANDLE handle, const char* gateway, const char* subdevice, const char* requestId, uint32_t version, JSON_Value* reported, JSON_Value* lastUpdatedTime)
 {
-    return iot_smarthome_client_update_shadow(handle, GenerateGatewaySubdevicePubObject(gateway, subdevice), requestId, version, reported, lastUpdatedTime);
+    char* pubObject = GenerateGatewaySubdevicePubObject(gateway, subdevice);
+    int result = iot_smarthome_client_update_shadow(handle, pubObject, requestId, version, reported, lastUpdatedTime);
+    free(pubObject);
+    return result;
 }
 
 int iot_smarthome_client_update_desired_with_binary(const IOT_SH_CLIENT_HANDLE handle, const char* device, const char* requestId, uint32_t version, const char* desired, const char* lastUpdatedTime)
@@ -970,7 +987,10 @@ int iot_smarthome_client_update_desired_with_binary(const IOT_SH_CLIENT_HANDLE h
 
 int iot_smarthome_client_update_subdevice_desired_with_binary(const IOT_SH_CLIENT_HANDLE handle, const char* gateway, const char* subdevice, const char* requestId, uint32_t version, const char* desired, const char* lastUpdatedTime)
 {
-    return iot_smarthome_client_update_desired_with_binary(handle, GenerateGatewaySubdevicePubObject(gateway, subdevice), requestId, version, desired, lastUpdatedTime);
+    char* pubObject = GenerateGatewaySubdevicePubObject(gateway, subdevice);
+    int result = iot_smarthome_client_update_desired_with_binary(handle, pubObject, requestId, version, desired, lastUpdatedTime);
+    free(pubObject);
+    return result;
 }
 
 int iot_smarthome_client_update_shadow_with_binary(const IOT_SH_CLIENT_HANDLE handle, const char* device, const char* requestId, uint32_t version, const char* reported, const char* lastUpdatedTime)
@@ -980,7 +1000,10 @@ int iot_smarthome_client_update_shadow_with_binary(const IOT_SH_CLIENT_HANDLE ha
 
 int iot_smarthome_client_update_subdevice_shadow_with_binary(const IOT_SH_CLIENT_HANDLE handle, const char* gateway, const char* subdevice, const char* requestId, uint32_t version, const char* reported, const char* lastUpdatedTime)
 {
-    return iot_smarthome_client_update_shadow_with_binary(handle, GenerateGatewaySubdevicePubObject(gateway, subdevice), requestId, version, reported, lastUpdatedTime);
+    char* pubObject = GenerateGatewaySubdevicePubObject(gateway, subdevice);
+    int result = iot_smarthome_client_update_shadow_with_binary(handle, pubObject, requestId, version, reported, lastUpdatedTime);
+    free(pubObject);
+    return result;
 }
 
 void iot_smarthome_client_ota_register_pull_job(const IOT_SH_CLIENT_HANDLE handle, SHADOW_OTA_JOB_CALLBACK callback, void* callbackContext)
@@ -1039,9 +1062,15 @@ int iot_smarthome_client_ota_report_result(const IOT_SH_CLIENT_HANDLE handle, co
 
 int iot_smarthome_client_ota_pull_subdevice_job(const IOT_SH_CLIENT_HANDLE handle, const char* gateway, const char* subdevice, const char* firmwareVersion, const char* requestId)
 {
-    return iot_smarthome_client_ota_pull_job(handle, GenerateGatewaySubdevicePubObject(gateway, subdevice), firmwareVersion, requestId);
+    char* pubObject = GenerateGatewaySubdevicePubObject(gateway, subdevice);
+    int result = iot_smarthome_client_ota_pull_job(handle, pubObject, firmwareVersion, requestId);
+    free(pubObject);
+    return result;
 }
 int iot_smarthome_client_ota_report_subdevice_result(const IOT_SH_CLIENT_HANDLE handle, const char* gateway, const char* subdevice, const char* jobId, const char* firmwareVersion, const char* requestId)
 {
-    return iot_smarthome_client_ota_report_result(handle, GenerateGatewaySubdevicePubObject(gateway, subdevice), jobId, firmwareVersion, requestId);
+    char* pubObject = GenerateGatewaySubdevicePubObject(gateway, subdevice);
+    int result = iot_smarthome_client_ota_report_result(handle, pubObject, jobId, firmwareVersion, requestId);
+    free(pubObject);
+    return result;
 }
