@@ -1,6 +1,6 @@
 [submodule "c-utility"]
 	path = c-utility
-	url = https://github.com/Azure/azure-c-shared-utility.git
+	url = https://github.com/jewelzhu/azure-c-shared-utility.git
 [submodule "parson"]
 	path = parson
 	url = https://github.com/kgabis/parson.git
