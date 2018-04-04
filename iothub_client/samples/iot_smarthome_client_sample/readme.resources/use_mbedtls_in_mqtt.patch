@@ -130,24 +130,3 @@ index b989950..afddca6 100644
  
  #endif // __TLS_CONFIG_H__
 \ No newline at end of file
-diff --git a/testtools/ctest b/testtools/ctest
-index 7721ff0..037e318 160000
---- a/testtools/ctest
-+++ b/testtools/ctest
-@@ -1 +1 @@
--Subproject commit 7721ff0c3dce7cb899a63b2d2d9e7c44a8e8595a
-+Subproject commit 037e318716e37eba358424380659dd1cd6d0554e
-diff --git a/testtools/testrunner b/testtools/testrunner
-index 7ff6375..ee279c8 160000
---- a/testtools/testrunner
-+++ b/testtools/testrunner
-@@ -1 +1 @@
--Subproject commit 7ff63752ad696f8b641af96f8cb168db4a38b179
-+Subproject commit ee279c8b72d64d9ee8ca917ce00c17e0b522461d
-diff --git a/testtools/umock-c b/testtools/umock-c
-index 7c9f928..f41aa23 160000
---- a/testtools/umock-c
-+++ b/testtools/umock-c
-@@ -1 +1 @@
--Subproject commit 7c9f92817b9745a132e907a062f4d60494b38e42
-+Subproject commit f41aa23712d82a27998d6918d3533d150e636ae8
