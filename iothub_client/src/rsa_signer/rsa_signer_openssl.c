@@ -126,7 +126,7 @@ const char * rsa_sha256_base64_signature(unsigned char* data, const char* pemPri
     }
 
     EVP_SignInit   (&md_ctx, EVP_sha256());
-    EVP_SignUpdate (&md_ctx, data, strlen(data));
+    EVP_SignUpdate (&md_ctx, data, strlen((const char *)data));
     sig_len = sizeof(sig_buf);
     err = EVP_SignFinal (&md_ctx, sig_buf, &sig_len, pkey);
 

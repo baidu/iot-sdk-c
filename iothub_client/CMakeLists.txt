@@ -133,7 +133,7 @@ else()
             )
 endif()
 
-if(${mbedtls_enable} STREQUAL "ON")
+if(${mbedtls_enable})
 target_link_libraries(iothub_client ${iothub_client_libs} ${mbedlibs})
 endif()
 
