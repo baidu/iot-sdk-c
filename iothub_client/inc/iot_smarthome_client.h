@@ -94,6 +94,10 @@ MOCKABLE_FUNCTION(, int, iot_smarthome_client_ota_report_result, const IOT_SH_CL
 MOCKABLE_FUNCTION(, int, iot_smarthome_client_ota_pull_subdevice_job, const IOT_SH_CLIENT_HANDLE, handle, const char*, gateway, const char*, subdevice, const char*, firmwareVersion, const char*, requestId);
 MOCKABLE_FUNCTION(, int, iot_smarthome_client_ota_report_subdevice_result, const IOT_SH_CLIENT_HANDLE, handle, const char*, gateway, const char*, subdevice, const char*, jobId, const char*, firmwareVersion, const char*, requestId);
 
+// RSA signature functions
+MOCKABLE_FUNCTION(, const char *, computeSignature, unsigned char*, data, const char *, clientKey);
+MOCKABLE_FUNCTION(, int, verifySignature, unsigned char*, data, const char*, clientCert, const char*, base64Signature);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

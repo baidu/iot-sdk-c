@@ -9,7 +9,7 @@ iot_smarthome_client是针对设备管理平台产品、运行于设备端的c�
 
 每个设备会有一组属性，这组属性就是该设备所属产品的参数设置，每一个属性的值都有两个版本，desired和reported值，desired值代表期望值，而reported值代表实际值。
 
-举一个简单例子来描述云端是如何和设备端交互以实现控制设备的。一个灯使用int型light_mode来标志亮度，当前的亮度为1（reported和desired值都是1），而希望通过云端将该灯的亮度调节为2，则由云端将该设备的light_mode的desired的值改为2，此时设备端会受到这条desired值的变化信息，然后将自身亮度调节为2，完成后上报reported值为2，完成后云端所记录的reported和desired的值也都同步变成了2。能够接受到desired值的变化，是因为设备端通过mqtt从云端sub(订阅)了相关的topic。能够上报新的reported值，是因为设备可以通过mqtt向云端pub(发布）了相应的消息。
+举一个简单例子来描述云端是如何和设备端交互以实现控制设备的。一个灯使用int型light_mode来标志亮度，当前的亮度为1（reported和desired值都是1），而希望通过云端将该灯的亮度调节为2，则由云端将该设备的light_mode的desired的值改为2，此时设备端会收到这条desired值的变化信息，然后将自身亮度调节为2，完成后上报reported值为2，完成后云端所记录的reported和desired的值也都同步变成了2。能够接受到desired值的变化，是因为设备端通过mqtt从云端sub(订阅)了相关的topic。能够上报新的reported值，是因为设备可以通过mqtt向云端pub(发布）了相应的消息。
 
 iot_smarthome_client基于mqtt协议连接到设备管理平台云端。他可以运行于一个普通智能设备，直接pub/sub自己的topic与云端进行通信；也可以运行于一个网关设备，代理多个无法直连云端的本地子设备，网关以代理身份向云端pub子设备的信息，并sub一个通配符topic来监听多个子设备的云端指令。
 
@@ -25,16 +25,52 @@ iot_smarthome_client基于mqtt协议连接到设备管理平台云端。他可�
 
 3）提供设备唯一16位标志符PUID
 
-4）提供设备唯一认证证书
+4）提供设备唯一认证证书（含私钥），设备的证书和私钥需通过百度云天工http接口获取。
 
 5）设备已经在云端授权激活。
 
-设备的授权激活由厂商使用百度云认证信息调用百度云天工http接口完成，具体激活接口信息请参考文档https://cloud.baidu.com/doc/IOT/API.html（待更新）
+设备的授权激活由厂商使用百度云认证信息调用百度云天工http接口完成，具体激活接口信息请参考文档https://cloud.baidu.com/doc/IOT/API.html（待更新）。
 
 如果是网关代理子设备的场景，需要先激活网关，然后再使用子设备信息+已激活网关的信息去激活子设备后，网关方可启用对该子设备的代理功能。网关本身的激活同普通设备的激活。
 
+### 2. 基于证书私钥计算数字签名
+为了校验激活接口的触发者是设备证书的合法所有者，云端激活接口需要使用基于设备证书私钥进行RSA SHA256数字签名。出于安全考虑，建议将签名过程放在设备端执行，本sdk中提供了openssl和mbedtls两个版本的数字签名功能，使用示例如下。如果你不选择在设备端进行数字签名，可以跳过本节。
+```
+static char * client_cert = "-----BEGIN CERTIFICATE-----\r\n"
+        "you client cert\r\n"
+        "-----END CERTIFICATE-----\r\n";
 
-### 2. 定义一个smarthome_client ###
+static char * client_key = "-----BEGIN RSA PRIVATE KEY-----\r\n"
+        "your client key\r\n"
+        "-----END RSA PRIVATE KEY-----\r\n";
+        
+unsigned char* data = (unsigned char*)"123456";
+const char* signature = computeSignature(data, client_key);
+if (signature == NULL) {
+    LogError("compute Signature failed");
+    return __FAILURE__;
+}
+
+LogInfo("rsa sha256 signature of %s is %s", data, signature);
+
+int sigRet = verifySignature(data, client_cert, signature);
+
+if (sigRet == 0) {
+    LogInfo("verify signature success");
+}
+else {
+    LogError("verify signature fail");
+    return __FAILURE__;
+}
+```
+
+openssl或mbedtls的选择在iothub_client/CmakeLists.txt中指定，用户需根据自己平台支持情况进行选择。
+```
+option(openssl_enable "set use_openssl to ON if your platform supports openssl" ON)
+#option(mbedtls_enable "set use mbedtls to ON if your platform supports mbedtls" ON)
+```
+
+### 3. 定义一个smarthome_client ###
 完成准备工作以后，即可创建smarthome_client准备与云端连接。
 
 创建client的代码如下，isGatewayDevice是一个布尔值，标志该设备是否为网关。
@@ -100,7 +136,7 @@ static void HandleDelta(const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON
 }
 ```
 
-### 3. 连接到云端 ###
+### 4. 连接到云端 ###
 DEVICE是设备PUID，USERNAME是endpointName/PUID, client_cert/client_key分别是设备的证书和私钥，通过这些信息可以成功与云端建立mqtt连接。
 
 ```
@@ -121,8 +157,8 @@ static char * client_key = "-----BEGIN RSA PRIVATE KEY-----\r\n"
 iot_smarthome_client_connect(handle, USERNAME, DEVICE, client_cert, client_key);
 ```
 
-### 4. 监听云端指令 ###
-创建一个循环始终监听云端指令，当有信息下发时，步骤2中注册的相应回调函数将会被触发。
+### 5. 监听云端指令 ###
+创建一个循环始终监听云端指令，当有信息下发时，步骤3中注册的相应回调函数将会被触发。
 ```
 while (iot_smarthome_client_dowork(handle) >= 0)
 {
@@ -130,7 +166,7 @@ while (iot_smarthome_client_dowork(handle) >= 0)
 }
 ```
 
-### 5. 向云端发布信息 ###
+### 6. 向云端发布信息 ###
 普通设备（包括网关设备发布自身信息而非代理子设备被信息的场景）向云端发布信息可使用如下接口：
 ```
 // 获取设备云端状态信息

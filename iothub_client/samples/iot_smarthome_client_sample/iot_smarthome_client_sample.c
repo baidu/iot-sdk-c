@@ -333,6 +333,26 @@ int iot_smarthome_client_run(bool isGatewayDevice)
     iot_smarthome_client_ota_register_pull_job(handle, HandleOtaJob, handle);
     iot_smarthome_client_ota_register_report_result(handle, HandleOtaReportResult, handle);
 
+    // do sha256 rsa signature and verification
+    unsigned char* data = (unsigned char*)"123456";
+    const char* signature = computeSignature(data, client_key);
+    if (signature == NULL) {
+        LogError("compute Signature failed");
+        return __FAILURE__;
+    }
+
+    LogInfo("rsa sha256 signature of %s is %s", data, signature);
+
+    int sigRet = verifySignature(data, client_cert, signature);
+
+    if (sigRet == 0) {
+        LogInfo("verify signature success");
+    }
+    else {
+        LogError("verify signature fail");
+        return __FAILURE__;
+    }
+
     if (0 != iot_smarthome_client_connect(handle, USERNAME, DEVICE, client_cert, client_key))
     {
         iot_smarthome_client_deinit(handle);
@@ -465,6 +485,7 @@ int pull_ota(void* handle)
         free(requestId);
         ThreadAPI_Sleep(10000);
     }
+    return 0;
 }
 
 static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_OTA_JOB_INFO* otaJobInfo, void* callbackContext)

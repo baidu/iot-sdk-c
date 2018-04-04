@@ -19,6 +19,7 @@
 
 #include <azure_c_shared_utility/xlogging.h>
 #include <azure_c_shared_utility/strings.h>
+#include <rsa_signer.h>
 #include "iot_smarthome_client.h"
 #include "iothub_mqtt_client.h"
 
@@ -441,7 +442,7 @@ static void OnRecvCallbackForMethodResp(const IOT_SH_CLIENT_HANDLE handle, const
 {
     char *message = malloc(payload->length + 1);
     if (message != NULL) {
-        strncpy(message, payload->message, payload->length);
+        strncpy(message, (char *)payload->message, payload->length);
         message[payload->length] = '\0';
         LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method response:\n%s\n%s", topic, message);
         free(message);
@@ -1073,4 +1074,13 @@ int iot_smarthome_client_ota_report_subdevice_result(const IOT_SH_CLIENT_HANDLE 
     int result = iot_smarthome_client_ota_report_result(handle, pubObject, jobId, firmwareVersion, requestId);
     free(pubObject);
     return result;
+}
+
+const char* computeSignature(unsigned char* data, const char* clientKey) {
+    return rsa_sha256_base64_signature(data, clientKey);
+}
+
+/* return 0 means verify ok */
+int verifySignature(unsigned char* data, const char* clientCert, const char* base64Signature) {
+    return verify_rsa_sha256_signature(data, clientCert, base64Signature);
 }
