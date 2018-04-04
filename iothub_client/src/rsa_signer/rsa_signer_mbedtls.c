@@ -58,6 +58,12 @@ const char * rsa_sha256_base64_signature(unsigned char* data, const char* pemPri
     unsigned char hash[32];
     unsigned char buf[MBEDTLS_MPI_MAX_SIZE];
 
+    // pemPrivateKey must ends with a \n
+    if (pemPrivateKey[strlen(pemPrivateKey) - 1] != '\n') {
+        LogError("private key in pem for mbedtls must ends with a '\\n'");
+        return NULL;
+    }
+
     if( ( ret = mbedtls_md(
             mbedtls_md_info_from_type( MBEDTLS_MD_SHA256 ), data, strlen(data),
              hash ) ) != 0 )
@@ -113,6 +119,11 @@ const char * rsa_sha256_base64_signature(unsigned char* data, const char* pemPri
 int verify_rsa_sha256_signature(unsigned char* data, const char* pemCert, const char* base64Signature) {
     int ret;
     unsigned char hash[32];
+
+    if (pemCert[strlen(pemCert) - 1] != '\n') {
+        LogError("cert in pem for mbedtls must ends with a '\\n'");
+        return -1;
+    }
 
     // Base64 decode
     unsigned char* sig_buf;
