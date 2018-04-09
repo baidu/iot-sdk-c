@@ -1006,7 +1006,8 @@ int iot_smarthome_client_update_subdevice_shadow_with_binary(const IOT_SH_CLIENT
     return result;
 }
 
-void iot_smarthome_client_ota_register_pull_job(const IOT_SH_CLIENT_HANDLE handle, SHADOW_OTA_JOB_CALLBACK callback, void* callbackContext)
+void iot_smarthome_client_ota_register_job(const IOT_SH_CLIENT_HANDLE handle, SHADOW_OTA_JOB_CALLBACK callback,
+                                           void *callbackContext)
 {
     handle->callback.otaJob = callback;
     handle->context.otaJob = callbackContext;
@@ -1040,7 +1041,8 @@ int iot_smarthome_client_method_req(const IOT_SH_CLIENT_HANDLE handle, const cha
     return SendRequest(handle, topic, request);
 }
 
-int iot_smarthome_client_ota_pull_job(const IOT_SH_CLIENT_HANDLE handle, const char* device, const char* firmwareVersion, const char* requestId)
+int iot_smarthome_client_ota_get_job(const IOT_SH_CLIENT_HANDLE handle, const char *device, const char *firmwareVersion,
+                                     const char *requestId)
 {
     JSON_Value* request = json_value_init_object();
     JSON_Object* root = json_object(request);
@@ -1060,10 +1062,12 @@ int iot_smarthome_client_ota_report_result(const IOT_SH_CLIENT_HANDLE handle, co
     return iot_smarthome_client_method_req(handle, device, METHOD_REPORT_FIRMWARE_UPDATE_RESULT, request, requestId);
 }
 
-int iot_smarthome_client_ota_pull_subdevice_job(const IOT_SH_CLIENT_HANDLE handle, const char* gateway, const char* subdevice, const char* firmwareVersion, const char* requestId)
+int iot_smarthome_client_ota_get_subdevice_job(const IOT_SH_CLIENT_HANDLE handle, const char *gateway,
+                                               const char *subdevice, const char *firmwareVersion,
+                                               const char *requestId)
 {
     char* pubObject = GenerateGatewaySubdevicePubObject(gateway, subdevice);
-    int result = iot_smarthome_client_ota_pull_job(handle, pubObject, firmwareVersion, requestId);
+    int result = iot_smarthome_client_ota_get_job(handle, pubObject, firmwareVersion, requestId);
     free(pubObject);
     return result;
 }

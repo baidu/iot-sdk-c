@@ -330,7 +330,7 @@ int iot_smarthome_client_run(bool isGatewayDevice)
     iot_smarthome_client_register_update_rejected(handle, HandleUpdateRejected, handle);
     iot_smarthome_client_register_update_documents(handle, HandleUpdateDocuments, handle);
     iot_smarthome_client_register_update_snapshot(handle, HandleUpdateSnapshot, handle);
-    iot_smarthome_client_ota_register_pull_job(handle, HandleOtaJob, handle);
+    iot_smarthome_client_ota_register_job(handle, HandleOtaJob, handle);
     iot_smarthome_client_ota_register_report_result(handle, HandleOtaReportResult, handle);
 
     if (0 != iot_smarthome_client_connect(handle, USERNAME, DEVICE, client_cert, client_key))
@@ -457,10 +457,11 @@ int pull_ota(void* handle)
         UUID_generate(&uuid);
         char* requestId = UUID_to_string(&uuid);
         LogInfo("Pulling OTA requestId=%s", requestId);
-        iot_smarthome_client_ota_pull_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, gatewayFirmwareVersion, requestId);
+        iot_smarthome_client_ota_get_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, gatewayFirmwareVersion, requestId);
         if (isGateway)
         {
-            iot_smarthome_client_ota_pull_subdevice_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, SUBDEVICE, subdeviceFirmwareVersion, requestId);
+            iot_smarthome_client_ota_get_subdevice_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, SUBDEVICE,
+                                                       subdeviceFirmwareVersion, requestId);
         }
         free(requestId);
         ThreadAPI_Sleep(10000);
