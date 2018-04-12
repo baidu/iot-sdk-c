@@ -41,12 +41,12 @@
 #define         SUBDEVICE           "your_gateway_subdevice_puid"
 
 static char * client_cert = "-----BEGIN CERTIFICATE-----\r\n"
-        "you client cert\r\n"
-        "-----END CERTIFICATE-----\r\n";
+                            "you client cert\r\n"
+                            "-----END CERTIFICATE-----\r\n";
 
 static char * client_key = "-----BEGIN RSA PRIVATE KEY-----\r\n"
-        "your client key\r\n"
-        "-----END RSA PRIVATE KEY-----\r\n";
+                           "your client key\r\n"
+                           "-----END RSA PRIVATE KEY-----\r\n";
 
 static bool isGateway;
 
@@ -508,12 +508,12 @@ static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHA
     if (messageContext->subdevice == NULL)
     {
         strncpy(gatewayFirmwareVersion, otaJobInfo->firmwareVersion, 64);
-        iot_smarthome_client_ota_report_result(handle, messageContext->device, otaJobInfo->jobId, otaJobInfo->firmwareVersion, "2345");
+        iot_smarthome_client_ota_report_result(handle, messageContext->device, otaJobInfo->jobId, true, "2345");
     }
     else
     {
         strncpy(subdeviceFirmwareVersion, otaJobInfo->firmwareVersion, 64);
-        iot_smarthome_client_ota_report_subdevice_result(handle, messageContext->device, messageContext->subdevice, otaJobInfo->jobId, otaJobInfo->firmwareVersion, "2345");
+        iot_smarthome_client_ota_report_subdevice_result(handle, messageContext->device, messageContext->subdevice, otaJobInfo->jobId, true, "2345");
 
     }
 }

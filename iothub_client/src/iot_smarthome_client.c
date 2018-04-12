@@ -70,7 +70,10 @@
 #define     KEY_JOB_ID                      "jobId"
 #define     KEY_FIRMWARE_VERSION            "firmwareVersion"
 #define     KEY_FIRMWARE_URL                "firmwareUrl"
+#define     KEY_RESULT                      "result"
 
+#define     VALUE_RESULT_SUCCESS            "success"
+#define     VALUE_RESULT_FAILURE            "failure"
 
 #define     ENDPOINT                        "baidu-smarthome.mqtt.iot.gz.baidubce.com"
 
@@ -1051,14 +1054,14 @@ int iot_smarthome_client_ota_get_job(const IOT_SH_CLIENT_HANDLE handle, const ch
     return iot_smarthome_client_method_req(handle, device, METHOD_GET_FIRMWARE, request, requestId);
 }
 
-int iot_smarthome_client_ota_report_result(const IOT_SH_CLIENT_HANDLE handle, const char* device, const char* jobId, const char* firmwareVersion, const char* requestId)
+int iot_smarthome_client_ota_report_result(const IOT_SH_CLIENT_HANDLE handle, const char* device, const char* jobId, bool isSuccess, const char* requestId)
 {
-    if (NULL == jobId || NULL == firmwareVersion) {
-        LogError("Failure: jobId and firmwareVersion should not be NULL");
+    if (NULL == jobId) {
+        LogError("Failure: jobId should not be NULL");
     }
     JSON_Value* request = json_value_init_object();
     JSON_Object* root = json_object(request);
-    json_object_set_string(root, KEY_FIRMWARE_VERSION, firmwareVersion);
+    json_object_set_string(root, KEY_RESULT, isSuccess ? VALUE_RESULT_SUCCESS : VALUE_RESULT_FAILURE);
     json_object_set_string(root, KEY_JOB_ID, jobId);
     return iot_smarthome_client_method_req(handle, device, METHOD_REPORT_FIRMWARE_UPDATE_RESULT, request, requestId);
 }
@@ -1072,10 +1075,10 @@ int iot_smarthome_client_ota_get_subdevice_job(const IOT_SH_CLIENT_HANDLE handle
     free(pubObject);
     return result;
 }
-int iot_smarthome_client_ota_report_subdevice_result(const IOT_SH_CLIENT_HANDLE handle, const char* gateway, const char* subdevice, const char* jobId, const char* firmwareVersion, const char* requestId)
+int iot_smarthome_client_ota_report_subdevice_result(const IOT_SH_CLIENT_HANDLE handle, const char* gateway, const char* subdevice, const char* jobId, bool isSuccess, const char* requestId)
 {
     char* pubObject = GenerateGatewaySubdevicePubObject(gateway, subdevice);
-    int result = iot_smarthome_client_ota_report_result(handle, pubObject, jobId, firmwareVersion, requestId);
+    int result = iot_smarthome_client_ota_report_result(handle, pubObject, jobId, isSuccess, requestId);
     free(pubObject);
     return result;
 }
