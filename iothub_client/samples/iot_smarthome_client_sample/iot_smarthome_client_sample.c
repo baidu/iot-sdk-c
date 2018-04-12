@@ -30,23 +30,53 @@
 #include "serializer.h"
 
 #define         SPLIT               "--------------------------------------------------------------------------------------------"
-
 // $puid
-#define         DEVICE              "your_puid"
+#define         DEVICE              "m593wfa2zx0jfpsa"
 
 // $endpointName/$puid
-#define         USERNAME            "your_endpoint_name/your_puid"
+#define         USERNAME            "e354ef98e333405ebeae893c0006d2b9/m593wfa2zx0jfpsa"
 
 // if your device is a gateway, you can add subdevice puids here
-#define         SUBDEVICE           "your_gateway_subdevice_puid"
+#define         SUBDEVICE           "7akh0k2hh467xfdc"
 
-static char * client_cert = "-----BEGIN CERTIFICATE-----\r\n"
-        "you client cert\r\n"
-        "-----END CERTIFICATE-----\r\n";
+static char * client_cert = "-----BEGIN CERTIFICATE-----\n"
+                            "MIIDnDCCAoSgAwIBAgIIJ0Ol13d9Ms0wDQYJKoZIhvcNAQELBQAwMzEWMBQGA1UE\n"
+                            "AwwNaW90LmJhaWR1LmNvbTEMMAoGA1UECwwDQkNFMQswCQYDVQQGEwJDTjAeFw0x\n"
+                            "ODAzMzAxMDQ4NDlaFw0yODAzMjcxMDU4MDBaMHAxDjAMBgNVBAoMBUJhaWR1MQsw\n"
+                            "CQYDVQQGEwJDTjFDMEEGA1UEAww6ZTM1NGVmOThlMzMzNDA1ZWJlYWU4OTNjMDAw\n"
+                            "NmQyYjkueDV4aW40Z3AubTU5M3dmYTJ6eDBqZnBzYTEMMAoGA1UECwwDQkNFMIGf\n"
+                            "MA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCt5zdqcXQ1j/xSkUfIF8Jvm0+63Q3O\n"
+                            "BlR47O22S0bYpNdZ66cLClWIINlt4tYIZmKyQ+/CIX5nfGMQPtKR0rVx3n6MEMA1\n"
+                            "wgd+vTyEJ5ZpFOrXSaf/Nhb0ME44IORlX+jFO5sdu5CI43JSfGAq0+pGYAbxN3oK\n"
+                            "YdEjkgWvWHSo0QIDAQABo4H6MIH3MB0GA1UdDgQWBBRejJHZ/VYd+AG2o7Qvt0fI\n"
+                            "zjHxPzAMBgNVHRMBAf8EAjAAMB8GA1UdIwQYMBaAFN0I5BWf1vz8AWv7jUq31dsF\n"
+                            "cI9jMHgGA1UdHwRxMG8wbaBroGmGZ2h0dHA6Ly9wa2kuaW92LmJhaWR1YmNlLmNv\n"
+                            "bS92MS9wa2kvY3JsP2NtZD1jcmwmZm9ybWF0PVBFTSZpc3N1ZXI9Q04lM0Rpb3Qu\n"
+                            "YmFpZHUuY29tJTJDT1UlM0RCQ0UlMkNDJTNEQ04wDgYDVR0PAQH/BAQDAgXgMB0G\n"
+                            "A1UdJQQWMBQGCCsGAQUFBwMCBggrBgEFBQcDBDANBgkqhkiG9w0BAQsFAAOCAQEA\n"
+                            "aXTray97x1+/XQ5ExyHxhCmONxRMHataeFBOJ8ElHLIjAddcbr3R+35mAjINiqFw\n"
+                            "Tglh01qOdj5vMJIIPvnsSKrwg/lphzQDRk/QbCov68JIPW2vIlcK2xbdMyHPjj+W\n"
+                            "9AWd+vuoTDACSxl50MsFxGVJNVMUsHNEMZr+WeFzA79HiOHRVlgxWNX+Qdo+peqM\n"
+                            "T6J6W1kbU2U3PpYs/WEikCA0fyck4a6Ru0mErwvkzBlUfo5EmyqFhSm7Qklfgcv5\n"
+                            "Jt22VgOWcLr+XdUPkp4S2aBqsgbjdt4N2STIFyA7nVuGTBd2JPi0zfe/hzwURNFl\n"
+                            "FT1b9+Gv9EEO+amyCmVibA==\n"
+                            "-----END CERTIFICATE-----";
 
-static char * client_key = "-----BEGIN RSA PRIVATE KEY-----\r\n"
-        "your client key\r\n"
-        "-----END RSA PRIVATE KEY-----\r\n";
+static char * client_key = "-----BEGIN RSA PRIVATE KEY-----\n"
+                           "MIICWwIBAAKBgQCt5zdqcXQ1j/xSkUfIF8Jvm0+63Q3OBlR47O22S0bYpNdZ66cL\n"
+                           "ClWIINlt4tYIZmKyQ+/CIX5nfGMQPtKR0rVx3n6MEMA1wgd+vTyEJ5ZpFOrXSaf/\n"
+                           "Nhb0ME44IORlX+jFO5sdu5CI43JSfGAq0+pGYAbxN3oKYdEjkgWvWHSo0QIDAQAB\n"
+                           "AoGAQaaJKBj+mv3pbq5D4AkAMSv71HqBLKb9Gs2vC+OtMjpAxkSNQkC7e3GTQ8Wf\n"
+                           "sXodhljZWXtVgfHWYBqnWb+nGV6xlA2FPlKNu/+SJNl3pjq68D+5YqrpDTcLpZXb\n"
+                           "Xf2rpB4Odh9GeNfCTBLLIWIWIh9yRdRlcWwR1EcQQxmocEECQQDoHd+zDUJ0f/Av\n"
+                           "ziiRCG724VLYbISakb5Smjs51Ua3hmQkr5/A8nt9SkDQEjdTSzPr/Ya1Lbs2dppl\n"
+                           "hjlVzXrZAkEAv8v0poemJVnLu3bb2yFyyvKL+oMrrQ/PUF9E1MFfW78U/TDWUNL3\n"
+                           "eJAPYqlQqpWSOYzielFMaWSRq4O2RGyyuQJAROXhKaes6yGyrK338pzbOyLE0YLc\n"
+                           "lXjfUmt/WvpIhF86yHzs4XvYVec9d8WAcJPo9IqLeqn5YQAxciM2T5aveQJAH/Xz\n"
+                           "0eBe7nB1Q8r9vhln0Kv0aY18NL2itWj6xl1m75n6/Gor/JH7TSrsdWtzlsmP8Wkp\n"
+                           "wGpVymZI5ATx1ZsreQJAHBOYhYr+sEflO71n2Q+sqDaT+m9lmJoJkEDjlF8rUAwV\n"
+                           "VweInYJwk0EJPj4qhcCYL9IP9TIOngMDVOXiNqCvjw==\n"
+                           "-----END RSA PRIVATE KEY-----";
 
 static bool isGateway;
 
@@ -486,12 +516,12 @@ static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHA
     if (messageContext->subdevice == NULL)
     {
         strncpy(gatewayFirmwareVersion, otaJobInfo->firmwareVersion, 64);
-        iot_smarthome_client_ota_report_result(handle, messageContext->device, otaJobInfo->jobId, otaJobInfo->firmwareVersion, "2345");
+        iot_smarthome_client_ota_report_result(handle, messageContext->device, otaJobInfo->jobId, true, "2345");
     }
     else
     {
         strncpy(subdeviceFirmwareVersion, otaJobInfo->firmwareVersion, 64);
-        iot_smarthome_client_ota_report_subdevice_result(handle, messageContext->device, messageContext->subdevice, otaJobInfo->jobId, otaJobInfo->firmwareVersion, "2345");
+        iot_smarthome_client_ota_report_subdevice_result(handle, messageContext->device, messageContext->subdevice, otaJobInfo->jobId, true, "2345");
 
     }
 }
