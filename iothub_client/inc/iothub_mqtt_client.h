@@ -68,6 +68,8 @@ typedef struct IOTHUB_MQTT_CLIENT_TAG
 {
     MQTT_CONNECTION_TYPE connType;
     char* endpoint;
+    char* client_cert;
+    char* client_key;
     MQTT_CLIENT_OPTIONS* options;
 
     // Protocol
@@ -131,6 +133,8 @@ MOCKABLE_FUNCTION(, int, iothub_mqtt_disconnect, IOTHUB_MQTT_CLIENT_HANDLE, iotH
 MOCKABLE_FUNCTION(, void, iothub_mqtt_destroy, IOTHUB_MQTT_CLIENT_HANDLE, iotHubClient);
 
 MOCKABLE_FUNCTION(, int, iothub_mqtt_doconnect, IOTHUB_MQTT_CLIENT_HANDLE, iotHubClient, size_t, timeout);
+
+MOCKABLE_FUNCTION(,void, set_client_cert, IOTHUB_MQTT_CLIENT_HANDLE, iotHubClient, const char*, client_cert, const char*, client_key);
 
 #ifdef __cplusplus
 }

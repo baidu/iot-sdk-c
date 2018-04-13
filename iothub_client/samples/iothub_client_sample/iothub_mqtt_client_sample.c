@@ -153,11 +153,11 @@ int iothub_mqtt_client_run(void)
         const char *endpoint = ENDPOINT;
 
         MQTT_CONNECTION_TYPE type;
-        if (CONNECTION_TYPE == "TLS")
+        if (strcmp(CONNECTION_TYPE, "TLS") == 0)
         {
              type = MQTT_CONNECTION_TLS;
         }
-        else if (CONNECTION_TYPE == "MUTUAL_TLS")
+        else if (strcmp(CONNECTION_TYPE, "MUTUAL_TLS") == 0)
         {
              type = MQTT_CONNECTION_MUTUAL_TLS;
         }

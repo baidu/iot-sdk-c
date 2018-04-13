@@ -873,7 +873,7 @@ static XIO_HANDLE CreateTlsConnection(const char *endpoint)
     return xio;
 }
 
-static XIO_HANDLE CreateMutualTlsConnection(const char *endpoint)
+static XIO_HANDLE CreateMutualTlsConnection(const char *endpoint, const char *client_cert_in_option, const char *client_key_in_option)
 {
     TLSIO_CONFIG tlsio_config = { endpoint, MQTT_CONNECTION_TLS_PORT };
     // enable wolfssl by set certificates
@@ -881,15 +881,18 @@ static XIO_HANDLE CreateMutualTlsConnection(const char *endpoint)
 
     XIO_HANDLE xio = xio_create(platform_get_default_tlsio(), &tlsio_config);
 
+    const char* client_cert_to_use = (client_cert_in_option == NULL) ? client_cert : client_cert_in_option;
+    const char* client_key_to_use = (client_key_in_option == NULL) ? client_key : client_key_in_option;
+
     if (xio_setoption(xio, "TrustedCerts", certificates) != 0)
     {
         LOG(AZ_LOG_ERROR, LOG_LINE, "Fail to assign trusted cert chain");
     }
-    if (xio_setoption(xio, "x509certificate", client_cert) != 0)
+    if (xio_setoption(xio, "x509certificate", client_cert_to_use) != 0)
     {
         LOG(AZ_LOG_ERROR, LOG_LINE, "Fail to assign client cert");
     }
-    if (xio_setoption(xio, "x509privatekey", client_key) != 0)
+    if (xio_setoption(xio, "x509privatekey", client_key_to_use) != 0)
     {
         LOG(AZ_LOG_ERROR, LOG_LINE, "Fail to assign client private key");
     }
@@ -918,7 +921,9 @@ static int SendMqttConnectMessage(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient)
             iotHubClient->xioTransport = CreateTlsConnection(iotHubClient->endpoint);
             break;
         case MQTT_CONNECTION_MUTUAL_TLS:
-            iotHubClient->xioTransport = CreateMutualTlsConnection(iotHubClient->endpoint);
+            iotHubClient->xioTransport = CreateMutualTlsConnection(iotHubClient->endpoint,
+                                                                   iotHubClient->client_cert,
+                                                                   iotHubClient->client_key);
     }
 
     if (iotHubClient->xioTransport == NULL)
@@ -947,7 +952,7 @@ static int SendMqttConnectMessage(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient)
 
 IOTHUB_MQTT_CLIENT_HANDLE initialize_mqtt_client_handle(const MQTT_CLIENT_OPTIONS *options, const char* endpoint,
                                                         MQTT_CONNECTION_TYPE connType, ON_MQTT_MESSAGE_RECV_CALLBACK callback,
-                                                        IOTHUB_CLIENT_RETRY_POLICY retryPolicy, size_t retryTimeoutLimitInSeconds)
+                                                        IOTHUB_CLIENT_RETRY_POLICY retryPolicy, size_t retryTimeoutLimitInSeconds )
 {
     IOTHUB_MQTT_CLIENT_HANDLE iotHubClient = (IOTHUB_MQTT_CLIENT_HANDLE)malloc(sizeof(IOTHUB_MQTT_CLIENT));
 
@@ -1029,6 +1034,11 @@ IOTHUB_MQTT_CLIENT_HANDLE initialize_mqtt_client_handle(const MQTT_CLIENT_OPTION
         }
     }
     return iotHubClient;
+}
+
+void set_client_cert(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient, const char* client_cert, const char* client_key) {
+    iotHubClient->client_cert = (char *) client_cert;
+    iotHubClient->client_key = (char *) client_key;
 }
 
 int initialize_mqtt_connection(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient)
