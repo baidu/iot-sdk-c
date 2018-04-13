@@ -191,7 +191,7 @@ int iothub_mqtt_client_run(void)
         subscribe[1].subscribeTopic = TOPIC_NAME_B;
         subscribe[1].qosReturn = DELIVER_AT_MOST_ONCE;
 
-        subscribe_mqtt_topics(clientHandle, subscribe, sizeof(subscribe)/sizeof(SUBSCRIBE_PAYLOAD));
+        subscribe_mqtt_topics(clientHandle, subscribe, sizeof(subscribe)/sizeof(SUBSCRIBE_PAYLOAD), NULL, NULL);
         const char* publishData = "publish message to topic /china/sh.";
 
         result = publish_mqtt_message(clientHandle, "/china/sh", DELIVER_EXACTLY_ONCE, (const uint8_t*)publishData,
@@ -226,7 +226,7 @@ int iothub_mqtt_client_run(void)
             if (clientHandle->mqttClientStatus == MQTT_CLIENT_STATUS_CONNECTED && needSubscribeTopic)
             {
                 needSubscribeTopic = false;
-                subscribe_mqtt_topics(clientHandle, subscribe, sizeof(subscribe)/sizeof(SUBSCRIBE_PAYLOAD));
+                subscribe_mqtt_topics(clientHandle, subscribe, sizeof(subscribe)/sizeof(SUBSCRIBE_PAYLOAD), NULL, NULL);
             }
 
             // send a publish message every 5 seconds

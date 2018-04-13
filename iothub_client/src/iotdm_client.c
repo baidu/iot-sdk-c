@@ -801,7 +801,7 @@ int iotdm_client_dowork(const IOTDM_CLIENT_HANDLE handle)
                 subscribe[index].subscribeTopic = topics[index];
                 subscribe[index].qosReturn = DELIVER_AT_LEAST_ONCE;
             }
-            int result = subscribe_mqtt_topics(handle->mqttClient, subscribe, amount);
+            int result = subscribe_mqtt_topics(handle->mqttClient, subscribe, amount, NULL, NULL);
             ReleaseSubscription(topics, SUB_TOPIC_SIZE);
             if (0 != result)
             {

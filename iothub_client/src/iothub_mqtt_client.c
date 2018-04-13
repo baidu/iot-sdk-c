@@ -55,6 +55,14 @@ typedef struct MQTT_PUB_CALLBACK_INFO_TAG
     DLIST_ENTRY entry;
 } MQTT_PUB_CALLBACK_INFO,* PMQTT_PUB_CALLBACK_INFO;
 
+typedef struct MQTT_SUB_CALLBACK_INFO_TAG
+{
+    uint16_t packetId;
+    SUB_CALLBACK subCallback;
+    void *context;
+    DLIST_ENTRY entry;
+} MQTT_SUB_CALLBACK_INFO,* PMQTT_SUB_CALLBACK_INFO;
+
 static int RetryPolicy_Exponential_BackOff_With_Jitter(bool *permit, size_t* delay, void* retryContextCallback)
 {
     int result;
@@ -407,6 +415,24 @@ static void OnMqttOperationComplete(MQTT_CLIENT_HANDLE handle, MQTT_CLIENT_EVENT
                         LogError("Subscribe delivery failure of subscribe %zu", index);
                     }
                 }
+
+                PDLIST_ENTRY currentListEntry = iotHubClient->ack_waiting_queue.Flink;
+                // when ack_waiting_queue.Flink points to itself, return directly
+                while (currentListEntry != &iotHubClient->ack_waiting_queue)
+                {
+                    PMQTT_SUB_CALLBACK_INFO subHandleEntry = containingRecord(currentListEntry, MQTT_SUB_CALLBACK_INFO, entry);
+                    DLIST_ENTRY saveListEntry;
+                    saveListEntry.Flink = currentListEntry->Flink;
+
+                    if (suback->packetId == subHandleEntry->packetId)
+                    {
+                        (void)DList_RemoveEntryList(currentListEntry); //First remove the item from Waiting for Ack List.
+                        subHandleEntry->subCallback(suback->qosReturn, suback->qosCount, subHandleEntry->context);
+                        free(subHandleEntry);
+                        break;
+                    }
+                    currentListEntry = saveListEntry.Flink;
+                }
             }
             else
             {
@@ -583,7 +609,8 @@ int publish_mqtt_message(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient, const char* top
 }
 
 
-int subscribe_mqtt_topics(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient, SUBSCRIBE_PAYLOAD *subPayloads, size_t subSize)
+int subscribe_mqtt_topics(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient, SUBSCRIBE_PAYLOAD *subPayloads,
+                          size_t subSize, SUB_CALLBACK subCallback, void* context)
 {
 
     int result = 0;
@@ -605,15 +632,38 @@ int subscribe_mqtt_topics(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient, SUBSCRIBE_PAYL
                 break;
             }
         }
-        if (isQosCheckSuccess && mqtt_client_subscribe(iotHubClient->mqttClient, GetNextPacketId(iotHubClient), subPayloads, subSize) != 0)
-        {
-            LogError("Failure: mqtt_client_subscribe returned error.");
-            result = __FAILURE__;
+
+        if (isQosCheckSuccess) {
+            uint16_t packet_id = GetNextPacketId(iotHubClient);
+            if (subCallback != NULL) {
+                PMQTT_SUB_CALLBACK_INFO subCallbackHandle = NULL;
+                subCallbackHandle = (PMQTT_SUB_CALLBACK_INFO)malloc(sizeof(PMQTT_SUB_CALLBACK_INFO));
+                if (subCallbackHandle == NULL)
+                {
+                    LogError("Fail to allocate memory for MQTT_PUB_CALLBACK_INFO");
+                    result = __FAILURE__;
+                    return result;
+                }
+                subCallbackHandle->packetId = packet_id;
+                subCallbackHandle->subCallback = subCallback;
+                subCallbackHandle->context = context;
+                subCallbackHandle->entry.Flink = NULL;
+                subCallbackHandle->entry.Blink = NULL;
+
+                DList_InsertTailList(&iotHubClient->ack_waiting_queue, &subCallbackHandle->entry);
+            }
+
+            if (mqtt_client_subscribe(iotHubClient->mqttClient, packet_id, subPayloads, subSize) != 0)
+            {
+                LogError("Failure: mqtt_client_subscribe returned error.");
+                result = __FAILURE__;
+            }
         }
     }
 
     return result;
 }
+
 
 int unsubscribe_mqtt_topics(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient, const char** unsubscribeList, size_t count)
 {
