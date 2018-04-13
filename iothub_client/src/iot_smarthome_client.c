@@ -750,7 +750,7 @@ int iot_smarthome_client_dowork(const IOT_SH_CLIENT_HANDLE handle)
                 subscribe[index].subscribeTopic = topics[index];
                 subscribe[index].qosReturn = DELIVER_AT_LEAST_ONCE;
             }
-            int result = subscribe_mqtt_topics(handle->mqttClient, subscribe, amount);
+            int result = subscribe_mqtt_topics(handle->mqttClient, subscribe, amount, NULL, NULL);
             ReleaseSubscription(topics, topicSize);
             if (0 != result)
             {

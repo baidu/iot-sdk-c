@@ -97,8 +97,11 @@ typedef struct IOTHUB_MQTT_CLIENT_TAG
     // Set this member variable to pass additional structure for user defined callback handle
     void* callbackContext;
 
-    // ack wait queue
-    DLIST_ENTRY ack_waiting_queue;
+    // pub ack wait queue
+    DLIST_ENTRY pub_ack_waiting_queue;
+
+    // sub ack wait queue
+    DLIST_ENTRY sub_ack_waiting_queue;
 
     // subscribe message callback handle
     ON_MQTT_MESSAGE_RECV_CALLBACK recvCallback;
