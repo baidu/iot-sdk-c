@@ -52,7 +52,7 @@
 #define     SUB_UPDATE_DOCUMENTS            "$baidu/iot/shadow/%s/update/documents"
 #define     SUB_UPDATE_SNAPSHOT             "$baidu/iot/shadow/%s/update/snapshot"
 #define     SUB_GATEWAY_WILDCARD            "%s/subdevice/+"
-#define     SUB_METHOD_RESP                 "$baidu/iot/shadow/%s/method/cloud/resp/+"
+#define     SUB_METHOD_RESP                 "$baidu/iot/shadow/%s/method/cloud/resp/#"
 #define     SUB_METHOD_REQ                  "$baidu/iot/shadow/%s/method/device/req"
 #define     KEY_CODE                        "code"
 #define     KEY_DESIRED                     "desired"
