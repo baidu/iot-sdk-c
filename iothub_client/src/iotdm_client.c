@@ -18,10 +18,12 @@
 */
 
 #include <azure_c_shared_utility/xlogging.h>
+#include <azure_c_shared_utility/uuid.h>
 #include "iotdm_client.h"
 #include "iothub_mqtt_client.h"
 
 #define     SUB_TOPIC_SIZE                  9
+#define     SUB_METHOD_TOPIC_SIZE           2
 
 #define     SLASH                           '/'
 
@@ -36,10 +38,13 @@
 #define     TOPIC_SUFFIX_UPDATE_SNAPSHOT    "update/snapshot"
 #define     TOPIC_SUFFIX_DELETE_ACCEPTED    "delete/accepted"
 #define     TOPIC_SUFFIX_DELETE_REJECTED    "delete/rejected"
+#define     TOPIC_SUFFIX_METHOD_DEVICE_REQ  "method/device/req"
+#define     TOPIC_SUFFIX_METHOD_CLOUD_RESP  "method/cloud/resp"
 
 #define     PUB_GET                         "$baidu/iot/shadow/%s/get"
 #define     PUB_UPDATE                      "$baidu/iot/shadow/%s/update"
 #define     PUB_DELETE                      "$baidu/iot/shadow/%s/delete"
+#define     PUB_METHOD_CLOUD_REQ            "$baidu/iot/shadow/%s/method/cloud/req"
 
 #define     SUB_DELTA                       "$baidu/iot/shadow/%s/delta"
 #define     SUB_GET_ACCEPTED                "$baidu/iot/shadow/%s/get/accepted"
@@ -50,6 +55,8 @@
 #define     SUB_UPDATE_SNAPSHOT             "$baidu/iot/shadow/%s/update/snapshot"
 #define     SUB_DELETE_ACCEPTED             "$baidu/iot/shadow/%s/delete/accepted"
 #define     SUB_DELETE_REJECTED             "$baidu/iot/shadow/%s/delete/rejected"
+#define     SUB_METHOD_RESP                 "$baidu/iot/shadow/%s/method/cloud/resp"
+#define     SUB_METHOD_REQ                  "$baidu/iot/shadow/%s/method/device/req"
 
 #define     KEY_CODE                        "code"
 #define     KEY_DESIRED                     "desired"
@@ -60,6 +67,22 @@
 #define     KEY_VERSION                     "profileVersion"
 #define     KEY_CURRENT                     "current"
 #define     KEY_PREVIOUS                    "previous"
+
+#define     KEY_METHOD_NAME                 "methodName"
+#define     KEY_STATUS                      "status"
+#define     KEY_PAYLOAD                     "payload"
+#define     KEY_JOB_ID                      "jobId"
+#define     KEY_FIRMWARE_VERSION            "firmwareVersion"
+#define     KEY_FIRMWARE_URL                "firmwareUrl"
+#define     KEY_RESULT                      "result"
+
+#define     VALUE_RESULT_SUCCESS            "success"
+#define     VALUE_RESULT_FAILURE            "failure"
+
+#define     METHOD_GET_FIRMWARE             "getFirmware"
+#define     METHOD_DO_FIRMWARE_UPDATE       "doFirmwareUpdate"
+#define     METHOD_REPORT_FIRMWARE_UPDATE_START     "reportFirmwareUpdateStart"
+#define     METHOD_REPORT_FIRMWARE_UPDATE_RESULT    "reportFirmwareUpdateResult"
 
 typedef struct SHADOW_CALLBACK_TAG
 {
@@ -72,6 +95,9 @@ typedef struct SHADOW_CALLBACK_TAG
     SHADOW_SNAPSHOT_CALLBACK updateSnapshot;
     SHADOW_ACCEPTED_CALLBACK deleteAccepted;
     SHADOW_ERROR_CALLBACK deleteRejected;
+    SHADOW_OTA_JOB_CALLBACK otaJob;
+    SHADOW_OTA_REPORT_RESULT_CALLBACK otaReportStart;
+    SHADOW_OTA_REPORT_RESULT_CALLBACK otaReportResult;
 } SHADOW_CALLBACK;
 
 typedef struct SHADOW_CALLBACK_CONTEXT_TAG
@@ -85,6 +111,9 @@ typedef struct SHADOW_CALLBACK_CONTEXT_TAG
     void* updateSnapshot;
     void* deleteAccepted;
     void* deleteRejected;
+    void* otaJob;
+    void* otaReportStart;
+    void* otaReportResult;
 } SHADOW_CALLBACK_CONTEXT;
 
 typedef struct IOTDM_CLIENT_TAG
@@ -97,6 +126,7 @@ typedef struct IOTDM_CLIENT_TAG
     MQTT_CONNECTION_TYPE mqttConnType;
     SHADOW_CALLBACK callback;
     SHADOW_CALLBACK_CONTEXT context;
+    bool enableOta;
 } IOTDM_CLIENT;
 
 static size_t StringLength(const char* string)
@@ -227,6 +257,8 @@ static char* GetDeviceFromTopic(const char* topic, SHADOW_CALLBACK_TYPE* type)
         return NULL;
     }
 
+    size_t tmp;
+    size_t topicLength = strlen(topic);
     // TODO: support more topics for subscription handle.
     if (StringCmp(TOPIC_SUFFIX_DELTA, topic, end + 1, StringLength(topic) + 1))
     {
@@ -263,6 +295,14 @@ static char* GetDeviceFromTopic(const char* topic, SHADOW_CALLBACK_TYPE* type)
     else if (StringCmp(TOPIC_SUFFIX_DELETE_REJECTED, topic, end + 1, StringLength(topic) + 1))
     {
         *type = SHADOW_CALLBACK_TYPE_DELETE_REJECTED;
+    }
+    else if (StringCmp(TOPIC_SUFFIX_METHOD_DEVICE_REQ, topic, tmp = topicLength - strlen(TOPIC_SUFFIX_METHOD_DEVICE_REQ), topicLength + 1)) {
+        *type = SHADOW_CALLBACK_TYPE_METHOD_REQ;
+        end = tmp - 1;
+    }
+    else if (StringCmp(TOPIC_SUFFIX_METHOD_CLOUD_RESP, topic, tmp = topicLength - strlen(TOPIC_SUFFIX_METHOD_CLOUD_RESP), topicLength + 1)) {
+        *type = SHADOW_CALLBACK_TYPE_METHOD_RESP;
+        end = tmp - 1;
     }
     else
     {
@@ -400,6 +440,23 @@ static int GetSubscription(IOTDM_CLIENT_HANDLE handle, char** subscribe, size_t 
             return -1;
         }
     }
+    if (handle->enableOta)
+    {
+        subscribe[index] = GenerateTopic(SUB_METHOD_REQ, handle->name);
+        if (NULL == subscribe[index++])
+        {
+            LogError("Failure: failed to generate the sub topic 'method/req'.");
+            ReleaseSubscription(subscribe, length);
+            return -1;
+        }
+        subscribe[index] = GenerateTopic(SUB_METHOD_RESP, handle->name);
+        if (NULL == subscribe[index++])
+        {
+            LogError("Failure: failed to generate the sub topic 'method/resp'.");
+            ReleaseSubscription(subscribe, length);
+            return -1;
+        }
+    }
 
     return index;
 }
@@ -454,6 +511,127 @@ static void OnRecvCallbackForError(const SHADOW_MESSAGE_CONTEXT* msgContext, con
     error.message = json_object_get_string(root, KEY_MESSAGE);
 
     (*callback)(msgContext, &error, callbackContext);
+}
+
+static void OnRecvCallbackForMethodReq(const IOTDM_CLIENT_HANDLE handle, const char *topic,
+                                       const SHADOW_MESSAGE_CONTEXT *msgContext, const JSON_Object *root,
+                                       const APP_PAYLOAD* payload)
+{
+    char *message = malloc(payload->length + 1);
+    if (message != NULL) {
+        strncpy(message, payload->message, payload->length);
+        message[payload->length] = '\0';
+        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method request:\n%s\n%s", topic, message);
+        free(message);
+    }
+    else
+    {
+        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method request:\n%s", topic);
+    }
+    const char* methodName = json_object_get_string(root, KEY_METHOD_NAME);
+
+    if (NULL == methodName) {
+        LogError("Failure: methodName should not be NULL");
+    } else {
+        double status = json_object_get_number(root, KEY_STATUS);
+        JSON_Object* payload = json_object_get_object(root, KEY_PAYLOAD);
+        if (strcmp(methodName, METHOD_DO_FIRMWARE_UPDATE) == 0)
+        {
+            // Handle response for get firmware
+            if (NULL != handle->callback.otaJob)
+            {
+                SHADOW_OTA_JOB_INFO otaJobInfo;
+                otaJobInfo.jobId = json_object_get_string(payload, KEY_JOB_ID);
+                otaJobInfo.firmwareUrl = json_object_get_string(payload, KEY_FIRMWARE_URL);
+                otaJobInfo.firmwareVersion = json_object_get_string(payload, KEY_FIRMWARE_VERSION);
+                (*(handle->callback.otaJob))(msgContext, &otaJobInfo, handle->context.otaJob);
+            }
+        }
+        else
+        {
+            LogError("Failure: cannot handle unknown method %s.", methodName);
+        }
+    }
+}
+
+static void OnRecvCallbackForMethodResp(const IOTDM_CLIENT_HANDLE handle, const char *topic,
+                                        const SHADOW_MESSAGE_CONTEXT *msgContext, const JSON_Object *root,
+                                        const APP_PAYLOAD* payload)
+{
+    char *message = malloc(payload->length + 1);
+    if (message != NULL) {
+        strncpy(message, payload->message, payload->length);
+        message[payload->length] = '\0';
+        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method response:\n%s\n%s", topic, message);
+        free(message);
+    }
+    else
+    {
+        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method response:\n%s", topic);
+    }
+    const char* methodName = json_object_get_string(root, KEY_METHOD_NAME);
+
+    if (NULL == methodName) {
+        LogError("Failure: methodName should not be NULL");
+    } else {
+        double status = json_object_get_number(root, KEY_STATUS);
+        JSON_Object* payload = json_object_get_object(root, KEY_PAYLOAD);
+        if (strcmp(methodName, METHOD_GET_FIRMWARE) == 0)
+        {
+            // Handle response for get firmware
+            if (status == 404)
+            {
+                // No job
+            }
+            else if (status == 200)
+            {
+                if (NULL != handle->callback.otaJob)
+                {
+                    SHADOW_OTA_JOB_INFO otaJobInfo;
+                    otaJobInfo.jobId = json_object_get_string(payload, KEY_JOB_ID);
+                    otaJobInfo.firmwareUrl = json_object_get_string(payload, KEY_FIRMWARE_URL);
+                    otaJobInfo.firmwareVersion = json_object_get_string(payload, KEY_FIRMWARE_VERSION);
+                    (*(handle->callback.otaJob))(msgContext, &otaJobInfo, handle->context.otaJob);
+                }
+            }
+            else
+            {
+                LogError("Unexpected response. %d", status);
+            }
+        }
+        else if (strcmp(methodName, METHOD_REPORT_FIRMWARE_UPDATE_START) == 0)
+        {
+            if (status >= 200 && status < 300)
+            {
+                if (NULL != handle->callback.otaReportStart)
+                {
+                    (*(handle->callback.otaReportStart))(msgContext, handle->context.otaReportStart);
+                }
+            }
+            else
+            {
+                LogError("Unexpected response. %d", status);
+            }
+        }
+        else if (strcmp(methodName, METHOD_REPORT_FIRMWARE_UPDATE_RESULT) == 0)
+        {
+            if (status >= 200 && status < 300)
+            {
+                if (NULL != handle->callback.otaReportResult)
+                {
+                    (*(handle->callback.otaReportResult))(msgContext, handle->context.otaReportResult);
+                }
+            }
+            else
+            {
+                LogError("Unexpected response. %d", status);
+            }
+        }
+        else
+        {
+            LogError("Failure: cannot handle unknown method response %s.", methodName);
+        }
+    }
 }
 
 static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
@@ -531,6 +709,14 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
                 OnRecvCallbackForError(&msgContext, root, handle->callback.deleteRejected, handle->context.deleteRejected);
                 break;
 
+            case SHADOW_CALLBACK_TYPE_METHOD_REQ:
+                OnRecvCallbackForMethodReq(handle, topic, &msgContext, root, payload);
+                break;
+
+            case SHADOW_CALLBACK_TYPE_METHOD_RESP:
+                OnRecvCallbackForMethodResp(handle, topic, &msgContext, root, payload);
+                break;
+
             default:
                 LogError("Failure: the shadow callback type is not supported.");
         }
@@ -581,6 +767,9 @@ static void ResetIotDmClient(IOTDM_CLIENT_HANDLE handle)
         handle->callback.updateSnapshot = NULL;
         handle->callback.deleteAccepted = NULL;
         handle->callback.deleteRejected = NULL;
+        handle->callback.otaJob = NULL;
+        handle->callback.otaReportStart = NULL;
+        handle->callback.otaReportResult = NULL;
 
         handle->context.delta = NULL;
         handle->context.getAccepted = NULL;
@@ -591,6 +780,9 @@ static void ResetIotDmClient(IOTDM_CLIENT_HANDLE handle)
         handle->context.updateDocuments = NULL;
         handle->context.deleteAccepted = NULL;
         handle->context.deleteRejected = NULL;
+        handle->context.otaJob = NULL;
+        handle->context.otaReportStart = NULL;
+        handle->context.otaReportResult = NULL;
     }
 }
 
@@ -612,7 +804,11 @@ static int SendRequest(const IOTDM_CLIENT_HANDLE handle, char* topic, JSON_Value
         }
         else
         {
-            result = publish_mqtt_message(handle->mqttClient, topic, DELIVER_AT_LEAST_ONCE, (uint8_t*)encoded, StringLength(encoded), NULL, NULL);
+            result = publish_mqtt_message(handle->mqttClient, topic, DELIVER_AT_LEAST_ONCE, (uint8_t*)encoded, strlen(encoded), NULL, NULL);
+            if (result != 0)
+            {
+                LogError("Failed to publish method message");
+            }
             json_free_serialized_string(encoded);
         }
     }
@@ -707,6 +903,47 @@ int OnSubAckCallback(QOS_VALUE* qosReturn, size_t qosCount, void *context)
     return 0;
 }
 
+static size_t CalTopicSize(IOTDM_CLIENT_HANDLE handle)
+{
+    return handle->enableOta ? SUB_TOPIC_SIZE + SUB_METHOD_TOPIC_SIZE : SUB_TOPIC_SIZE;
+}
+
+static char* GenRequestId()
+{
+    UUID uuid;
+    UUID_generate(&uuid);
+    return UUID_to_string(&uuid);
+}
+
+/* Send a Method request to cloud */
+static int SendMethodReq(const IOTDM_CLIENT_HANDLE handle, const char *device, const char *methodName, JSON_Value *payload,
+                  const char *requestId) {
+    if (NULL == requestId)
+    {
+        LogError("Failure: request id should not be NULL.");
+        if (payload != NULL) {
+            json_value_free(payload);
+        }
+        return __FAILURE__;
+    }
+
+    JSON_Value* request = json_value_init_object();
+    JSON_Object* root = json_object(request);
+    json_object_set_string(root, KEY_REQUEST_ID, requestId);
+    json_object_set_string(root, KEY_METHOD_NAME, methodName);
+    if (payload != NULL) {
+        json_object_set_value(root, KEY_PAYLOAD, payload);
+    }
+    char* topic = GenerateTopic(PUB_METHOD_CLOUD_REQ, device);
+    char* s = json_serialize_to_string(request);
+    if (s != NULL)
+    {
+        LOG(AZ_LOG_TRACE, LOG_LINE, "Sending method request:\n%s\n%s", topic, s);
+        json_free_serialized_string(s);
+    }
+    return SendRequest(handle, topic, request);
+}
+
 IOTDM_CLIENT_HANDLE iotdm_client_init(char* broker, char* name)
 {
     if (NULL == broker || NULL == name)
@@ -739,8 +976,9 @@ void iotdm_client_deinit(IOTDM_CLIENT_HANDLE handle)
 {
     if (NULL != handle)
     {
-        char* topics[SUB_TOPIC_SIZE];
-        int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE);
+        size_t topicSize = CalTopicSize(handle);
+        char* topics[topicSize];
+        int amount = GetSubscription(handle, topics, topicSize);
         if (amount < 0)
         {
             LogError("Failure: failed to get the subscribing topics.");
@@ -748,7 +986,7 @@ void iotdm_client_deinit(IOTDM_CLIENT_HANDLE handle)
         else if (amount > 0)
         {
             unsubscribe_mqtt_topics(handle->mqttClient, (const char**) topics, amount);
-            ReleaseSubscription(topics, SUB_TOPIC_SIZE);
+            ReleaseSubscription(topics, topicSize);
         }
 
         iothub_mqtt_destroy(handle->mqttClient);
@@ -790,7 +1028,7 @@ int iotdm_client_connect(IOTDM_CLIENT_HANDLE handle, const IOTDM_CLIENT_OPTIONS 
 
     handle->mqttClient->isDestroyCalled = false;
     handle->mqttClient->isDisconnectCalled = false;
-
+    handle->enableOta = options->enableOta;
     return 0;
 }
 
@@ -811,22 +1049,30 @@ int iotdm_client_dowork(const IOTDM_CLIENT_HANDLE handle)
         time_t current = time(NULL);
         double elipsed = difftime(current, handle->subscribeSentTimestamp);
         if (elipsed > 10) {
-
-            char *topics[SUB_TOPIC_SIZE];
-            int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE);
-            if (amount < 0) {
+            size_t topicSize = CalTopicSize(handle);
+            char* topics[topicSize];
+            int amount = GetSubscription(handle, topics, topicSize);
+            if (amount < 0)
+            {
                 LogError("Failure: failed to get the subscribing topics.");
                 return __FAILURE__;
-            } else if (amount > 0) {
-                SUBSCRIBE_PAYLOAD subscribe[SUB_TOPIC_SIZE];
-                for (size_t index = 0; index < (size_t) amount; ++index) {
+            }
+            else if (amount > 0)
+            {
+                SUBSCRIBE_PAYLOAD subscribe[topicSize];
+                for (size_t index = 0; index < (size_t)amount; ++index)
+                {
                     subscribe[index].subscribeTopic = topics[index];
                     subscribe[index].qosReturn = DELIVER_AT_LEAST_ONCE;
                 }
                 int result = subscribe_mqtt_topics(handle->mqttClient, subscribe, amount, OnSubAckCallback, handle);
-                handle->subscribeSentTimestamp = time(NULL);
-                ReleaseSubscription(topics, SUB_TOPIC_SIZE);
-                if (0 != result) {
+                if (result == 0)
+                {
+                    handle->subscribeSentTimestamp = time(NULL);
+                }
+                ReleaseSubscription(topics, topicSize);
+                if (0 != result)
+                {
                     LogError("Failure: failed to subscribe the topics.");
                     return __FAILURE__;
                 }
@@ -941,4 +1187,63 @@ int iotdm_client_update_desired_with_binary(const IOTDM_CLIENT_HANDLE handle, co
 int iotdm_client_update_shadow_with_binary(const IOTDM_CLIENT_HANDLE handle, const char* device, const char* requestId, uint32_t version, const char* reported, const char* lastUpdatedTime)
 {
     return UpdateShadowWithBinary(handle, device, KEY_REPORTED, requestId, version, reported, lastUpdatedTime);
+}
+
+
+void iotdm_client_ota_register_job(const IOTDM_CLIENT_HANDLE handle, SHADOW_OTA_JOB_CALLBACK callback,
+                                           void *callbackContext)
+{
+    handle->callback.otaJob = callback;
+    handle->context.otaJob = callbackContext;
+}
+
+void iotdm_client_ota_register_report_start(const IOTDM_CLIENT_HANDLE handle, SHADOW_OTA_REPORT_RESULT_CALLBACK callback, void* callbackContext)
+{
+    handle->callback.otaReportStart = callback;
+    handle->context.otaReportStart = callbackContext;
+}
+
+void iotdm_client_ota_register_report_result(const IOTDM_CLIENT_HANDLE handle, SHADOW_OTA_REPORT_RESULT_CALLBACK callback, void* callbackContext)
+{
+    handle->callback.otaReportResult = callback;
+    handle->context.otaReportResult = callbackContext;
+}
+
+int iotdm_client_ota_get_job(const IOTDM_CLIENT_HANDLE handle, const char *firmwareVersion,
+                                     const char *requestId)
+{
+    JSON_Value* request = NULL;
+
+    if (firmwareVersion != NULL)
+    {
+        request = json_value_init_object();
+        JSON_Object* root = json_object(request);
+        json_object_set_string(root, KEY_FIRMWARE_VERSION, firmwareVersion);
+    }
+    return SendMethodReq(handle, handle->name, METHOD_GET_FIRMWARE, request, requestId);
+}
+
+int iotdm_client_ota_report_start(const IOTDM_CLIENT_HANDLE handle, const char* jobId, const char* requestId)
+{
+    if (NULL == jobId) {
+        LogError("Failure: jobId should not be NULL");
+        return __FAILURE__;
+    }
+    JSON_Value* request = json_value_init_object();
+    JSON_Object* root = json_object(request);
+    json_object_set_string(root, KEY_JOB_ID, jobId);
+    return SendMethodReq(handle, handle->name, METHOD_REPORT_FIRMWARE_UPDATE_START, request, requestId);
+}
+
+int iotdm_client_ota_report_result(const IOTDM_CLIENT_HANDLE handle, const char* jobId, bool isSuccess, const char* requestId)
+{
+    if (NULL == jobId) {
+        LogError("Failure: jobId should not be NULL");
+        return __FAILURE__;
+    }
+    JSON_Value* request = json_value_init_object();
+    JSON_Object* root = json_object(request);
+    json_object_set_string(root, KEY_RESULT, isSuccess ? VALUE_RESULT_SUCCESS : VALUE_RESULT_FAILURE);
+    json_object_set_string(root, KEY_JOB_ID, jobId);
+    return SendMethodReq(handle, handle->name, METHOD_REPORT_FIRMWARE_UPDATE_RESULT, request, requestId);
 }
