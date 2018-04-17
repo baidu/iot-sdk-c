@@ -899,18 +899,15 @@ static XIO_HANDLE CreateMutualTlsConnection(const char *endpoint, const char *cl
 
     XIO_HANDLE xio = xio_create(platform_get_default_tlsio(), &tlsio_config);
 
-    const char* client_cert_to_use = (client_cert_in_option == NULL) ? client_cert : client_cert_in_option;
-    const char* client_key_to_use = (client_key_in_option == NULL) ? client_key : client_key_in_option;
-
     if (xio_setoption(xio, "TrustedCerts", certificates) != 0)
     {
         LOG(AZ_LOG_ERROR, LOG_LINE, "Fail to assign trusted cert chain");
     }
-    if (xio_setoption(xio, "x509certificate", client_cert_to_use) != 0)
+    if (xio_setoption(xio, "x509certificate", client_cert_in_option) != 0)
     {
         LOG(AZ_LOG_ERROR, LOG_LINE, "Fail to assign client cert");
     }
-    if (xio_setoption(xio, "x509privatekey", client_key_to_use) != 0)
+    if (xio_setoption(xio, "x509privatekey", client_key_in_option) != 0)
     {
         LOG(AZ_LOG_ERROR, LOG_LINE, "Fail to assign client private key");
     }
