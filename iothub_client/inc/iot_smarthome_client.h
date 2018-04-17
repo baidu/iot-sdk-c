@@ -89,9 +89,11 @@ MOCKABLE_FUNCTION(, void, iot_smarthome_client_ota_register_job, const IOT_SH_CL
 MOCKABLE_FUNCTION(, void, iot_smarthome_client_ota_register_report_result, const IOT_SH_CLIENT_HANDLE, handle, SHADOW_OTA_REPORT_RESULT_CALLBACK, callback, void*, callbackContext);
 
 MOCKABLE_FUNCTION(, int, iot_smarthome_client_ota_get_job, const IOT_SH_CLIENT_HANDLE, handle, const char*, device, const char*, firmwareVersion, const char*, requestId);
+MOCKABLE_FUNCTION(, int, iot_smarthome_client_ota_report_start, const IOT_SH_CLIENT_HANDLE, handle, const char*, device, const char*, jobId, const char*, requestId);
 MOCKABLE_FUNCTION(, int, iot_smarthome_client_ota_report_result, const IOT_SH_CLIENT_HANDLE, handle, const char*, device, const char*, jobId, bool, isSuccess, const char*, requestId);
 
 MOCKABLE_FUNCTION(, int, iot_smarthome_client_ota_get_subdevice_job, const IOT_SH_CLIENT_HANDLE, handle, const char*, gateway, const char*, subdevice, const char*, firmwareVersion, const char*, requestId);
+MOCKABLE_FUNCTION(, int, iot_smarthome_client_ota_report_subdevice_start, const IOT_SH_CLIENT_HANDLE, handle, const char*, gateway, const char*, subdevice, const char*, jobId, const char*, requestId);
 MOCKABLE_FUNCTION(, int, iot_smarthome_client_ota_report_subdevice_result, const IOT_SH_CLIENT_HANDLE, handle, const char*, gateway, const char*, subdevice, const char*, jobId, bool, isSuccess, const char*, requestId);
 
 // RSA signature functions

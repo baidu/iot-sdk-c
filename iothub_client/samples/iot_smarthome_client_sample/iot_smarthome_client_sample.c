@@ -507,11 +507,13 @@ static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHA
     // Report result
     if (messageContext->subdevice == NULL)
     {
+        iot_smarthome_client_ota_report_start(handle, messageContext->device, otaJobInfo->jobId, "2345");
         strncpy(gatewayFirmwareVersion, otaJobInfo->firmwareVersion, 64);
         iot_smarthome_client_ota_report_result(handle, messageContext->device, otaJobInfo->jobId, true, "2345");
     }
     else
     {
+        iot_smarthome_client_ota_report_subdevice_start(handle, messageContext->device, messageContext->subdevice, otaJobInfo->jobId, "2345");
         strncpy(subdeviceFirmwareVersion, otaJobInfo->firmwareVersion, 64);
         iot_smarthome_client_ota_report_subdevice_result(handle, messageContext->device, messageContext->subdevice, otaJobInfo->jobId, true, "2345");
 
