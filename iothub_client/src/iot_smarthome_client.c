@@ -983,6 +983,7 @@ int iot_smarthome_client_dowork(const IOT_SH_CLIENT_HANDLE handle)
                 LogError("Failure: failed to subscribe the topics.");
                 return __FAILURE__;
             }
+            handle->subscribed = true;
         }
     }
 
@@ -1183,4 +1184,13 @@ int iot_smarthome_client_ota_report_subdevice_result(const IOT_SH_CLIENT_HANDLE 
     int result = iot_smarthome_client_ota_report_result(handle, pubObject, jobId, isSuccess, requestId);
     free(pubObject);
     return result;
+}
+
+const char* computeSignature(unsigned char* data, const char* clientKey) {
+       return rsa_sha256_base64_signature(data, clientKey);
+    }
+
+/* return 0 means verify ok */
+int verifySignature(unsigned char* data, const char* clientCert, const char* base64Signature) {
+    return verify_rsa_sha256_signature(data, clientCert, base64Signature);
 }
