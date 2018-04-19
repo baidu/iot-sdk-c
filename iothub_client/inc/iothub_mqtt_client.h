@@ -58,6 +58,8 @@ typedef enum MQTT_PUB_STATUS_TYPE_TAG
 
 typedef int(*PUB_CALLBACK)(MQTT_PUB_STATUS_TYPE status, void *context);
 
+typedef int(*SUB_CALLBACK)(QOS_VALUE* qosReturn, size_t qosCount, void *context);
+
 typedef int(*RETRY_POLICY)(bool *permit, size_t* delay, void* retryContextCallback);
 
 typedef struct RETRY_LOGIC_TAG RETRY_LOGIC;
@@ -95,8 +97,11 @@ typedef struct IOTHUB_MQTT_CLIENT_TAG
     // Set this member variable to pass additional structure for user defined callback handle
     void* callbackContext;
 
-    // ack wait queue
-    DLIST_ENTRY ack_waiting_queue;
+    // pub ack wait queue
+    DLIST_ENTRY pub_ack_waiting_queue;
+
+    // sub ack wait queue
+    DLIST_ENTRY sub_ack_waiting_queue;
 
     // subscribe message callback handle
     ON_MQTT_MESSAGE_RECV_CALLBACK recvCallback;
@@ -120,7 +125,7 @@ MOCKABLE_FUNCTION(, IOTHUB_MQTT_CLIENT_HANDLE, initialize_mqtt_client_handle, co
 MOCKABLE_FUNCTION(, int, publish_mqtt_message, IOTHUB_MQTT_CLIENT_HANDLE, iotHubClient, const char*, topicName,
                          QOS_VALUE, qosValue, const uint8_t*, appMsg, size_t, appMsgLength, PUB_CALLBACK, handle, void*, context);
 
-MOCKABLE_FUNCTION(, int, subscribe_mqtt_topics, IOTHUB_MQTT_CLIENT_HANDLE, iotHubClient, SUBSCRIBE_PAYLOAD*, subPayloads, size_t, subSize);
+MOCKABLE_FUNCTION(, int, subscribe_mqtt_topics, IOTHUB_MQTT_CLIENT_HANDLE, iotHubClient, SUBSCRIBE_PAYLOAD*, subPayloads, size_t, subSize, SUB_CALLBACK, subCallback, void*, context);
 
 MOCKABLE_FUNCTION(, int, unsubscribe_mqtt_topics, IOTHUB_MQTT_CLIENT_HANDLE, iotHubClient, const char**, unsubscribeList, size_t, count);
 

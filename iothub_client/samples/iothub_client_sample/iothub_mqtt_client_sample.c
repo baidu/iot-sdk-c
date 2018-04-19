@@ -33,8 +33,17 @@
 // The key (password) of mqtt client.
 #define         PASSWORD                    "xxxx"
 
-// The connection type is TLS or MUTUAL_TLS. If MUTUAL_TLS selected certificate and key should be set in 'certs.c'.
-#define         CONNECTION_TYPE              "MUTUAL_TLS"
+// The connection type is TCP, TLS or MUTUAL_TLS.
+#define         CONNECTION_TYPE              "TCP"
+
+//The following certificate and key should be set if CONNECTION_TYPE set to 'MUTUAL_TLS'.
+static char * client_cert = "-----BEGIN CERTIFICATE-----\r\n"
+        "you client cert\r\n"
+        "-----END CERTIFICATE-----\r\n";
+
+static char * client_key = "-----BEGIN RSA PRIVATE KEY-----\r\n"
+        "your client key\r\n"
+        "-----END RSA PRIVATE KEY-----\r\n";
 
 static const char* TOPIC_NAME_A = "msgA";
 static const char* TOPIC_NAME_B = "msgB";
@@ -131,6 +140,18 @@ int pub_most_once_process(MQTT_PUB_STATUS_TYPE status, void* context)
     return 0;
 }
 
+static int processSubAckFunction(QOS_VALUE* qosReturn, size_t qosCount, void *context) {
+    printf("receive suback from hub server\r\n");
+    for (int i =0; i< qosCount; ++i) {
+        printf("qos return: %d\r\n", qosReturn[i]);
+    }
+
+    int *flag = (int *)context;
+    *flag = 1;
+
+    return 0;
+}
+
 int iothub_mqtt_client_run(void)
 {
     if (platform_init() != 0)
@@ -153,7 +174,11 @@ int iothub_mqtt_client_run(void)
         const char *endpoint = ENDPOINT;
 
         MQTT_CONNECTION_TYPE type;
-        if (strcmp(CONNECTION_TYPE, "TLS") == 0)
+        if (strcmp(CONNECTION_TYPE, "TCP") == 0)
+        {
+            type = MQTT_CONNECTION_TCP;
+        }
+        else if (strcmp(CONNECTION_TYPE, "TLS") == 0)
         {
              type = MQTT_CONNECTION_TLS;
         }
@@ -170,6 +195,11 @@ int iothub_mqtt_client_run(void)
 
         IOTHUB_MQTT_CLIENT_HANDLE clientHandle = initialize_mqtt_client_handle(&options, endpoint, type, on_recv_callback,
                                                                                retryPolicy, retryTimeoutLimitInSeconds);
+
+        if (strcmp(CONNECTION_TYPE, "MUTUAL_TLS") == 0)
+        {
+            set_client_cert(clientHandle, client_cert, client_key);
+        }
 
         if (clientHandle == NULL)
         {
@@ -191,7 +221,9 @@ int iothub_mqtt_client_run(void)
         subscribe[1].subscribeTopic = TOPIC_NAME_B;
         subscribe[1].qosReturn = DELIVER_AT_MOST_ONCE;
 
-        subscribe_mqtt_topics(clientHandle, subscribe, sizeof(subscribe)/sizeof(SUBSCRIBE_PAYLOAD));
+        int flag = 0;
+        subscribe_mqtt_topics(clientHandle, subscribe, sizeof(subscribe)/sizeof(SUBSCRIBE_PAYLOAD), processSubAckFunction, &flag);
+
         const char* publishData = "publish message to topic /china/sh.";
 
         result = publish_mqtt_message(clientHandle, "/china/sh", DELIVER_EXACTLY_ONCE, (const uint8_t*)publishData,
@@ -226,7 +258,7 @@ int iothub_mqtt_client_run(void)
             if (clientHandle->mqttClientStatus == MQTT_CLIENT_STATUS_CONNECTED && needSubscribeTopic)
             {
                 needSubscribeTopic = false;
-                subscribe_mqtt_topics(clientHandle, subscribe, sizeof(subscribe)/sizeof(SUBSCRIBE_PAYLOAD));
+                subscribe_mqtt_topics(clientHandle, subscribe, sizeof(subscribe)/sizeof(SUBSCRIBE_PAYLOAD), NULL, NULL);
             }
 
             // send a publish message every 5 seconds

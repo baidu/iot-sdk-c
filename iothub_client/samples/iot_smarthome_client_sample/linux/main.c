@@ -22,7 +22,7 @@
 
 int main(void)
 {
-    bool isGatewayDevice = true;
+    bool isGatewayDevice = false;
     iot_smarthome_client_run(isGatewayDevice);
     return 0;
 }

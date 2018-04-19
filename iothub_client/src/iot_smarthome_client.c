@@ -113,6 +113,7 @@ typedef struct SHADOW_CALLBACK_CONTEXT_TAG
 typedef struct IOT_SH_CLIENT_TAG
 {
     bool subscribed;
+    time_t subscribeSentTimestamp;
     char* endpoint;
     char* name;
     IOTHUB_MQTT_CLIENT_HANDLE mqttClient;
@@ -688,6 +689,7 @@ static void ResetIotDmClient(IOT_SH_CLIENT_HANDLE handle)
     if (NULL != handle)
     {
         handle->subscribed = false;
+        handle->subscribeSentTimestamp = 0;
 
         handle->endpoint = NULL;
         handle->name = NULL;
@@ -945,6 +947,22 @@ int iot_smarthome_client_connect(IOT_SH_CLIENT_HANDLE handle, const char* userna
     return 0;
 }
 
+int OnSubAckCallback(QOS_VALUE* qosReturn, size_t qosCount, void *context)
+{
+    for (int i = 0; i < qosCount; ++i)
+    {
+        if (qosReturn[i] == DELIVER_FAILURE)
+        {
+            LogError("Failed to subscribe");
+            return 0;
+        }
+    }
+    IOT_SH_CLIENT_HANDLE handle = context;
+    handle->subscribed = true;
+    LogInfo("Subscribed topics");
+    return 0;
+}
+
 int iot_smarthome_client_dowork(const IOT_SH_CLIENT_HANDLE handle)
 {
     if (handle->mqttClient->isDestroyCalled || handle->mqttClient->isDisconnectCalled)
@@ -952,38 +970,40 @@ int iot_smarthome_client_dowork(const IOT_SH_CLIENT_HANDLE handle)
         return -1;
     }
 
-    handle->subscribed = !(handle->mqttClient->isConnectionLost) && handle->subscribed;
+    if (handle->mqttClient->isConnectionLost)
+    {
+        handle->subscribed = false;
+        handle->subscribeSentTimestamp = 0;
+    }
     if (handle->mqttClient->mqttClientStatus == MQTT_CLIENT_STATUS_CONNECTED && !(handle->subscribed))
     {
-        size_t topicSize = handle->isGateway == true ? SUB_TOPIC_SIZE * 2 : SUB_TOPIC_SIZE;
-        char* topics[topicSize];
-        int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, 0, handle->name);
-        if (handle->isGateway == true) {
-            char *subObject = GenerateTopic(SUB_GATEWAY_WILDCARD, handle->name);
-            amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, amount, subObject);
-            free(subObject);
-        }
-        if (amount < 0)
-        {
-            LogError("Failure: failed to get the subscribing topics.");
-            return __FAILURE__;
-        }
-        else if (amount > 0)
-        {
-            SUBSCRIBE_PAYLOAD subscribe[topicSize];
-            for (size_t index = 0; index < (size_t)amount; ++index)
-            {
-                subscribe[index].subscribeTopic = topics[index];
-                subscribe[index].qosReturn = DELIVER_AT_LEAST_ONCE;
+        time_t current = time(NULL);
+        double elipsed = difftime(current, handle->subscribeSentTimestamp);
+        if (elipsed > 10) {
+            size_t topicSize = handle->isGateway == true ? SUB_TOPIC_SIZE * 2 : SUB_TOPIC_SIZE;
+            char *topics[topicSize];
+            int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, 0, handle->name);
+            if (handle->isGateway == true) {
+                char *subObject = GenerateTopic(SUB_GATEWAY_WILDCARD, handle->name);
+                amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, amount, subObject);
+                free(subObject);
             }
-            int result = subscribe_mqtt_topics(handle->mqttClient, subscribe, amount);
-            ReleaseSubscription(topics, amount);
-            if (0 != result)
-            {
-                LogError("Failure: failed to subscribe the topics.");
+            if (amount < 0) {
+                LogError("Failure: failed to get the subscribing topics.");
                 return __FAILURE__;
+            } else if (amount > 0) {
+                SUBSCRIBE_PAYLOAD subscribe[topicSize];
+                for (size_t index = 0; index < (size_t) amount; ++index) {
+                    subscribe[index].subscribeTopic = topics[index];
+                    subscribe[index].qosReturn = DELIVER_AT_LEAST_ONCE;
+                }
+                int result = subscribe_mqtt_topics(handle->mqttClient, subscribe, amount, OnSubAckCallback, handle);
+                ReleaseSubscription(topics, amount);
+                if (0 != result) {
+                    LogError("Failure: failed to subscribe the topics.");
+                    return __FAILURE__;
+                }
             }
-            handle->subscribed = true;
         }
     }
 
