@@ -50,8 +50,6 @@ static char * client_key = "-----BEGIN RSA PRIVATE KEY-----\r\n"
 
 static bool isGateway;
 
-static volatile bool stopOtaPulling = false;
-
 // define your own parameters here
 BEGIN_NAMESPACE(BaiduIotDeviceSample);
 
@@ -294,7 +292,11 @@ static void HandleDelta(const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON
     Log(SPLIT);
 }
 
-static int pull_ota(void* handle);
+static char gatewayFirmwareVersion[64];
+
+static char subdeviceFirmwareVersion[64];
+
+static int InitOta(void *handle);
 
 static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_OTA_JOB_INFO* otaJobInfo, void* callbackContext);
 
@@ -353,6 +355,9 @@ int iot_smarthome_client_run(bool isGatewayDevice)
         return __FAILURE__;
     }
 
+    strncpy(gatewayFirmwareVersion, "0.1.0", 64);
+    strncpy(subdeviceFirmwareVersion, "0.1.0", 64);
+
     if (0 != iot_smarthome_client_connect(handle, USERNAME, DEVICE, client_cert, client_key))
     {
         iot_smarthome_client_deinit(handle);
@@ -363,12 +368,12 @@ int iot_smarthome_client_run(bool isGatewayDevice)
     // Subscribe the topics.
     iot_smarthome_client_dowork(handle);
 
-    // Start OTA pulling
-    LogInfo("Starting OTA pulling");
-    THREAD_HANDLE otaPullingThread = NULL;
-    if (0 != ThreadAPI_Create(&otaPullingThread, pull_ota, handle)) {
-        LogError("Failed to create thread");
-        return __FAILURE__;
+    // Report firmware version and get OTA job
+    iot_smarthome_client_ota_get_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, gatewayFirmwareVersion, "1234");
+    if (isGateway)
+    {
+        iot_smarthome_client_ota_get_subdevice_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, SUBDEVICE,
+                                                   subdeviceFirmwareVersion, "2345");
     }
 
     // Sample: get device shadow
@@ -446,12 +451,6 @@ int iot_smarthome_client_run(bool isGatewayDevice)
         ThreadAPI_Sleep(100);
     }
 
-    // Stop OTA pulling
-    LogInfo("Stopping OTA pulling");
-    stopOtaPulling = true;
-    int res;
-    ThreadAPI_Join(otaPullingThread, &res);
-
     iot_smarthome_client_deinit(handle);
     serializer_deinit();
     platform_deinit();
@@ -461,32 +460,6 @@ int iot_smarthome_client_run(bool isGatewayDevice)
 #ifdef _CRT_DBG_MAP_ALLOC
     _CrtDumpMemoryLeaks();
 #endif
-}
-
-static char gatewayFirmwareVersion[64];
-
-static char subdeviceFirmwareVersion[64];
-
-int pull_ota(void* handle)
-{
-    strncpy(gatewayFirmwareVersion, "0.1.0", 64);
-    strncpy(subdeviceFirmwareVersion, "0.1.0", 64);
-    while (!stopOtaPulling)
-    {
-        UUID uuid;
-        UUID_generate(&uuid);
-        char* requestId = UUID_to_string(&uuid);
-        LogInfo("Pulling OTA requestId=%s", requestId);
-        iot_smarthome_client_ota_get_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, gatewayFirmwareVersion, requestId);
-        if (isGateway)
-        {
-            iot_smarthome_client_ota_get_subdevice_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, SUBDEVICE,
-                                                       subdeviceFirmwareVersion, requestId);
-        }
-        free(requestId);
-        ThreadAPI_Sleep(10000);
-    }
-    return 0;
 }
 
 static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_OTA_JOB_INFO* otaJobInfo, void* callbackContext)
