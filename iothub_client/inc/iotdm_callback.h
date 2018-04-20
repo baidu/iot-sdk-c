@@ -39,7 +39,9 @@ typedef enum SHADOW_CALLBACK_TYPE_TAG
     SHADOW_CALLBACK_TYPE_UPDATE_DOCUMENTS,
     SHADOW_CALLBACK_TYPE_UPDATE_SNAPSHOT,
     SHADOW_CALLBACK_TYPE_DELETE_ACCEPTED,
-    SHADOW_CALLBACK_TYPE_DELETE_REJECTED
+    SHADOW_CALLBACK_TYPE_DELETE_REJECTED,
+    SHADOW_CALLBACK_TYPE_METHOD_RESP,
+    SHADOW_CALLBACK_TYPE_METHOD_REQ,
 } SHADOW_CALLBACK_TYPE;
 
 typedef struct SHADOW_ERROR_TAG
@@ -76,11 +78,21 @@ typedef struct SHADOW_SNAPSHOT_TAG
     const JSON_Object* lastUpdateTime;
 } SHADOW_SNAPSHOT;
 
+typedef struct SHADOW_OTA_JOB_INFO_TAG
+{
+    const char *jobId;
+    const char *firmwareUrl;
+    const char *firmwareVersion;
+} SHADOW_OTA_JOB_INFO;
+
 typedef void (*SHADOW_DELTA_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON_Object* desired, void* callbackContext);
 typedef void (*SHADOW_ERROR_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext);
 typedef void (*SHADOW_ACCEPTED_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext);
 typedef void (*SHADOW_DOCUMENTS_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_DOCUMENTS* documents, void* callbackContext);
 typedef void (*SHADOW_SNAPSHOT_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_SNAPSHOT* snapshot, void* callbackContext);
+
+typedef void (*SHADOW_OTA_JOB_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_OTA_JOB_INFO* otaJobInfo, void* callbackContext);
+typedef void (*SHADOW_OTA_REPORT_RESULT_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, void* callbackContext);
 
 #ifdef __cplusplus
 }

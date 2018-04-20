@@ -49,6 +49,9 @@ typedef struct IOTDM_CLIENT_OPTIONS_TAG
     // Timeout for publishing device request in seconds.
     size_t retryTimeoutInSeconds;
 
+    // If set to true, will get OTA job after each reconnect in iotdm_client_dowork.
+    bool enableOta;
+
 } IOTDM_CLIENT_OPTIONS; 
 
 MOCKABLE_FUNCTION(, IOTDM_CLIENT_HANDLE, iotdm_client_init, char*, broker, char*, name);
@@ -75,6 +78,15 @@ MOCKABLE_FUNCTION(, int, iotdm_client_update_shadow_with_binary, const IOTDM_CLI
 
 
 MOCKABLE_FUNCTION(, int, iotdm_client_dowork, const IOTDM_CLIENT_HANDLE, handle);
+
+// OTA functions
+MOCKABLE_FUNCTION(, void, iotdm_client_ota_register_job, const IOTDM_CLIENT_HANDLE, handle, SHADOW_OTA_JOB_CALLBACK, callback, void*, callbackContext);
+MOCKABLE_FUNCTION(, void, iotdm_client_ota_register_report_start, const IOTDM_CLIENT_HANDLE, handle, SHADOW_OTA_REPORT_RESULT_CALLBACK, callback, void*, callbackContext);
+MOCKABLE_FUNCTION(, void, iotdm_client_ota_register_report_result, const IOTDM_CLIENT_HANDLE, handle, SHADOW_OTA_REPORT_RESULT_CALLBACK, callback, void*, callbackContext);
+
+MOCKABLE_FUNCTION(, int, iotdm_client_ota_get_job, const IOTDM_CLIENT_HANDLE, handle, const char*, firmwareVersion, const char*, requestId);
+MOCKABLE_FUNCTION(, int, iotdm_client_ota_report_start, const IOTDM_CLIENT_HANDLE, handle, const char*, jobId, const char*, requestId);
+MOCKABLE_FUNCTION(, int, iotdm_client_ota_report_result, const IOTDM_CLIENT_HANDLE, handle, const char*, jobId, bool, isSuccess, const char*, requestId);
 
 #ifdef __cplusplus
 }
