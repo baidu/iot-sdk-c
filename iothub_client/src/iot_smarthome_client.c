@@ -42,6 +42,7 @@
 #define     PUB_GET                         "$baidu/iot/shadow/%s/get"
 #define     PUB_UPDATE                      "$baidu/iot/shadow/%s/update"
 #define     PUB_METHOD_CLOUD_REQ            "$baidu/iot/shadow/%s/method/cloud/req"
+#define     PUB_METHOD_DEVICE_RESP          "$baidu/iot/shadow/%s/method/device/resp"
 #define     GATEWAY_SUBDEVICE_PUB_OBJECT    "%s/subdevice/%s"
 
 #define     SUB_DELTA                       "$baidu/iot/shadow/%s/delta"
@@ -444,6 +445,8 @@ static void OnRecvCallbackForSnapshot(const IOT_SH_CLIENT_HANDLE handle, const S
     (*(handle->callback.updateSnapshot))(msgContext, &shadow_snapshot, handle->context.updateSnapshot);
 }
 
+static int SendMethodResp(const IOT_SH_CLIENT_HANDLE handle, const SHADOW_MESSAGE_CONTEXT *msgContext, const char *methodName, JSON_Value *payload);
+
 static void OnRecvCallbackForMethodReq(const IOT_SH_CLIENT_HANDLE handle, const char *topic,
                                        const SHADOW_MESSAGE_CONTEXT *msgContext, const JSON_Object *root,
                                        const APP_PAYLOAD* payload)
@@ -464,7 +467,6 @@ static void OnRecvCallbackForMethodReq(const IOT_SH_CLIENT_HANDLE handle, const 
     if (NULL == methodName) {
         LogError("Failure: methodName should not be NULL");
     } else {
-        double status = json_object_get_number(root, KEY_STATUS);
         JSON_Object* payload = json_object_get_object(root, KEY_PAYLOAD);
         if (strcmp(methodName, METHOD_DO_FIRMWARE_UPDATE) == 0)
         {
@@ -477,6 +479,7 @@ static void OnRecvCallbackForMethodReq(const IOT_SH_CLIENT_HANDLE handle, const 
                 otaJobInfo.firmwareVersion = json_object_get_string(payload, KEY_FIRMWARE_VERSION);
                 (*(handle->callback.otaJob))(msgContext, &otaJobInfo, handle->context.otaJob);
             }
+            SendMethodResp(handle, msgContext, methodName, NULL);
         }
         else
         {
@@ -737,7 +740,7 @@ static int SendRequest(const IOT_SH_CLIENT_HANDLE handle, char* topic, JSON_Valu
         }
         else
         {
-            LOG(AZ_LOG_TRACE, LOG_LINE, "Sending Method request:\n%s\n%s", topic, encoded);
+            LOG(AZ_LOG_TRACE, LOG_LINE, "Sending request:\n%s\n%s", topic, encoded);
             result = publish_mqtt_message(handle->mqttClient, topic, DELIVER_AT_LEAST_ONCE, (uint8_t*)encoded, strlen(encoded), NULL, NULL);
             if (result != 0)
             {
@@ -841,13 +844,32 @@ static int SendMethodReq(const IOT_SH_CLIENT_HANDLE handle, const char *device, 
         json_object_set_value(root, KEY_PAYLOAD, payload);
     }
     char* topic = GenerateTopic(PUB_METHOD_CLOUD_REQ, device);
-    char* s = json_serialize_to_string(request);
-    if (s != NULL)
-    {
-        LOG(AZ_LOG_TRACE, LOG_LINE, "Sending method request:\n%s\n%s", topic, s);
-        json_free_serialized_string(s);
-    }
+
     return SendRequest(handle, topic, request);
+}
+
+/* Send a Method request to cloud */
+int SendMethodResp(const IOT_SH_CLIENT_HANDLE handle, const SHADOW_MESSAGE_CONTEXT *msgContext, const char *methodName, JSON_Value *payload) {
+    JSON_Value* response = json_value_init_object();
+    JSON_Object* root = json_object(response);
+    json_object_set_string(root, KEY_REQUEST_ID, msgContext->requestId);
+    json_object_set_string(root, KEY_METHOD_NAME, methodName);
+    if (payload != NULL) {
+        json_object_set_value(root, KEY_PAYLOAD, payload);
+    }
+    char* topic = NULL;
+    if (msgContext->subdevice != NULL)
+    {
+        char* pubObject = GenerateGatewaySubdevicePubObject(msgContext->device, msgContext->subdevice);
+        topic = GenerateTopic(PUB_METHOD_DEVICE_RESP, pubObject);
+        free(pubObject);
+    }
+    else
+    {
+        topic = GenerateTopic(PUB_METHOD_DEVICE_RESP, msgContext->device);
+    }
+
+    return SendRequest(handle, topic, response);
 }
 
 IOT_SH_CLIENT_HANDLE iot_smarthome_client_init(bool isGatewayDevice)
@@ -910,7 +932,7 @@ int iot_smarthome_client_connect(IOT_SH_CLIENT_HANDLE handle, const char* userna
     options.clientId = (char *) deviceId;
     options.username = (char *) username;
     options.password = NULL;
-    options.keepAliveInterval = 5;
+    options.keepAliveInterval = 300;
     options.retryTimeoutInSeconds = 300;
     options.client_cert = (char *) client_cert;
     options.client_key = (char *) client_key;
@@ -1003,6 +1025,7 @@ int iot_smarthome_client_dowork(const IOT_SH_CLIENT_HANDLE handle)
                     LogError("Failure: failed to subscribe the topics.");
                     return __FAILURE__;
                 }
+                handle->subscribeSentTimestamp = time(NULL);
             }
         }
     }

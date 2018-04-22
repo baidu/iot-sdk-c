@@ -368,14 +368,6 @@ int iot_smarthome_client_run(bool isGatewayDevice)
     // Subscribe the topics.
     iot_smarthome_client_dowork(handle);
 
-    // Report firmware version and get OTA job
-    iot_smarthome_client_ota_get_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, gatewayFirmwareVersion, "1234");
-    if (isGateway)
-    {
-        iot_smarthome_client_ota_get_subdevice_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, SUBDEVICE,
-                                                   subdeviceFirmwareVersion, "2345");
-    }
-
     // Sample: get device shadow
     int result = isGateway ? iot_smarthome_client_get_subdevice_shadow(handle, DEVICE, SUBDEVICE, "123456789")
                            : iot_smarthome_client_get_shadow(handle, DEVICE, "123456789");
@@ -445,6 +437,14 @@ int iot_smarthome_client_run(bool isGatewayDevice)
 
     DESTROY_MODEL_INSTANCE(pump);
 
+    // Report firmware version and get OTA job
+    iot_smarthome_client_ota_get_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, gatewayFirmwareVersion, "1234");
+    if (isGateway)
+    {
+        iot_smarthome_client_ota_get_subdevice_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, SUBDEVICE,
+                                                   subdeviceFirmwareVersion, "2345");
+    }
+
     // Sample: subscribe the delta topic and update shadow with desired value.
     while (iot_smarthome_client_dowork(handle) >= 0)
     {
@@ -462,10 +462,17 @@ int iot_smarthome_client_run(bool isGatewayDevice)
 #endif
 }
 
+static char lastJobId[64];
+
 static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_OTA_JOB_INFO* otaJobInfo, void* callbackContext)
 {
     const char *actualDevice = messageContext->subdevice == NULL ? messageContext->device : messageContext->subdevice;
     LogInfo("Received an OTA job for %s", actualDevice);
+    if (0 == strcmp(lastJobId, otaJobInfo->jobId))
+    {
+        // Given AT_LEAST_ONCE QoS, we have to consider the situation that the ota job may be sent multiple times.
+        return;
+    }
     // Pull OTA file
     unsigned int status;
     BUFFER_HANDLE firmwareBuffer = BUFFER_new();
@@ -489,8 +496,8 @@ static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHA
         iot_smarthome_client_ota_report_subdevice_start(handle, messageContext->device, messageContext->subdevice, otaJobInfo->jobId, "2345");
         strncpy(subdeviceFirmwareVersion, otaJobInfo->firmwareVersion, 64);
         iot_smarthome_client_ota_report_subdevice_result(handle, messageContext->device, messageContext->subdevice, otaJobInfo->jobId, true, "2345");
-
     }
+    strcpy(lastJobId, otaJobInfo->jobId);
 }
 
 static void HandleOtaReportResult(const SHADOW_MESSAGE_CONTEXT* messageContext, void* callbackContext)
