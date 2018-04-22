@@ -45,6 +45,8 @@
 #define     PUB_UPDATE                      "$baidu/iot/shadow/%s/update"
 #define     PUB_DELETE                      "$baidu/iot/shadow/%s/delete"
 #define     PUB_METHOD_CLOUD_REQ            "$baidu/iot/shadow/%s/method/cloud/req"
+#define     PUB_METHOD_DEVICE_RESP          "$baidu/iot/shadow/%s/method/device/resp"
+
 
 #define     SUB_DELTA                       "$baidu/iot/shadow/%s/delta"
 #define     SUB_GET_ACCEPTED                "$baidu/iot/shadow/%s/get/accepted"
@@ -128,6 +130,9 @@ typedef struct IOTDM_CLIENT_TAG
     SHADOW_CALLBACK_CONTEXT context;
     bool enableOta;
 } IOTDM_CLIENT;
+
+/* Send a Method response to cloud */
+static int SendMethodResp(IOTDM_CLIENT_HANDLE handle, const SHADOW_MESSAGE_CONTEXT *msgContext, const char *methodName, JSON_Value *payload) ;
 
 static size_t StringLength(const char* string)
 {
@@ -545,6 +550,7 @@ static void OnRecvCallbackForMethodReq(const IOTDM_CLIENT_HANDLE handle, const c
                 otaJobInfo.firmwareUrl = json_object_get_string(payload, KEY_FIRMWARE_URL);
                 otaJobInfo.firmwareVersion = json_object_get_string(payload, KEY_FIRMWARE_VERSION);
                 (*(handle->callback.otaJob))(msgContext, &otaJobInfo, handle->context.otaJob);
+                SendMethodResp(handle, msgContext, methodName, NULL);
             }
         }
         else
@@ -942,6 +948,25 @@ static int SendMethodReq(const IOTDM_CLIENT_HANDLE handle, const char *device, c
         json_free_serialized_string(s);
     }
     return SendRequest(handle, topic, request);
+}
+
+/* Send a Method response to cloud */
+int SendMethodResp(const IOTDM_CLIENT_HANDLE handle, const SHADOW_MESSAGE_CONTEXT *msgContext, const char *methodName, JSON_Value *payload) {
+    JSON_Value* response = json_value_init_object();
+    JSON_Object* root = json_object(response);
+    json_object_set_string(root, KEY_REQUEST_ID, msgContext->requestId);
+    json_object_set_string(root, KEY_METHOD_NAME, methodName);
+    if (payload != NULL) {
+        json_object_set_value(root, KEY_PAYLOAD, payload);
+    }
+    char* topic = GenerateTopic(PUB_METHOD_DEVICE_RESP, msgContext->device);
+    char* s = json_serialize_to_string(response);
+    if (s != NULL)
+    {
+        LOG(AZ_LOG_TRACE, LOG_LINE, "Sending method response:\n%s\n%s", topic, s);
+        json_free_serialized_string(s);
+    }
+    return SendRequest(handle, topic, response);
 }
 
 IOTDM_CLIENT_HANDLE iotdm_client_init(char* broker, char* name)
