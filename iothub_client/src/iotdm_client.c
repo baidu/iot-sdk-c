@@ -1002,7 +1002,12 @@ void iotdm_client_deinit(IOTDM_CLIENT_HANDLE handle)
     if (NULL != handle)
     {
         size_t topicSize = CalTopicSize(handle);
-        char* topics[topicSize];
+        char** topics = malloc(topicSize);
+        if (topics == NULL)
+        {
+            LogError("Failure: failed to alloc");
+            return;
+        }
         int amount = GetSubscription(handle, topics, topicSize);
         if (amount < 0)
         {
@@ -1013,6 +1018,7 @@ void iotdm_client_deinit(IOTDM_CLIENT_HANDLE handle)
             unsubscribe_mqtt_topics(handle->mqttClient, (const char**) topics, amount);
             ReleaseSubscription(topics, topicSize);
         }
+        free(topics);
 
         iothub_mqtt_destroy(handle->mqttClient);
         if (NULL != handle->endpoint)
@@ -1075,11 +1081,18 @@ int iotdm_client_dowork(const IOTDM_CLIENT_HANDLE handle)
         double elipsed = difftime(current, handle->subscribeSentTimestamp);
         if (elipsed > 10) {
             size_t topicSize = CalTopicSize(handle);
-            char* topics[topicSize];
+            char** topics = malloc(topicSize);
+            if (topics == NULL)
+            {
+                LogError("Failure: failed to alloc");
+                return __FAILURE__;
+            }
+
             int amount = GetSubscription(handle, topics, topicSize);
             if (amount < 0)
             {
                 LogError("Failure: failed to get the subscribing topics.");
+                free(topics);
                 return __FAILURE__;
             }
             else if (amount > 0)
@@ -1096,6 +1109,7 @@ int iotdm_client_dowork(const IOTDM_CLIENT_HANDLE handle)
                     handle->subscribeSentTimestamp = time(NULL);
                 }
                 ReleaseSubscription(topics, topicSize);
+                free(topics);
                 if (0 != result)
                 {
                     LogError("Failure: failed to subscribe the topics.");
