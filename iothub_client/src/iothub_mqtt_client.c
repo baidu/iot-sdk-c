@@ -1078,7 +1078,6 @@ int initialize_mqtt_connection(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient)
             else
             {
                 if (iotHubClient->isConnectionLost && iotHubClient->isRecoverableError) {
-                    xio_destroy(iotHubClient->xioTransport);
                     mqtt_client_deinit(iotHubClient->mqttClient);
                     iotHubClient->mqttClient = mqtt_client_init(iotHubClient->recvCallback, OnMqttOperationComplete,
                                                                 iotHubClient, OnMqttErrorComplete, iotHubClient);
