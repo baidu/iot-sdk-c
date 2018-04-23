@@ -316,6 +316,7 @@ static void ReleaseSubscription(char** subscribe, size_t length)
             subscribe[index] = NULL;
         }
     }
+    free(subscribe);
 }
 
 
@@ -896,8 +897,7 @@ void iot_smarthome_client_deinit(IOT_SH_CLIENT_HANDLE handle)
 {
     if (NULL != handle) {
         size_t topicSize = handle->isGateway == true ? SUB_TOPIC_SIZE * 2 : SUB_TOPIC_SIZE;
-        char * topics[topicSize];
-
+        char ** topics =  (char **)malloc(sizeof(char *) * topicSize);
 
         int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, 0, handle->name);
 
@@ -1003,7 +1003,7 @@ int iot_smarthome_client_dowork(const IOT_SH_CLIENT_HANDLE handle)
         double elipsed = difftime(current, handle->subscribeSentTimestamp);
         if (elipsed > 10) {
             size_t topicSize = handle->isGateway == true ? SUB_TOPIC_SIZE * 2 : SUB_TOPIC_SIZE;
-            char *topics[topicSize];
+            char **topics =  (char **)malloc(sizeof(char *) * topicSize);
             int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, 0, handle->name);
             if (handle->isGateway == true) {
                 char *subObject = GenerateTopic(SUB_GATEWAY_WILDCARD, handle->name);
@@ -1014,12 +1014,13 @@ int iot_smarthome_client_dowork(const IOT_SH_CLIENT_HANDLE handle)
                 LogError("Failure: failed to get the subscribing topics.");
                 return __FAILURE__;
             } else if (amount > 0) {
-                SUBSCRIBE_PAYLOAD subscribe[topicSize];
+                SUBSCRIBE_PAYLOAD * subscribe = malloc(sizeof(SUBSCRIBE_PAYLOAD) * topicSize);
                 for (size_t index = 0; index < (size_t) amount; ++index) {
                     subscribe[index].subscribeTopic = topics[index];
                     subscribe[index].qosReturn = DELIVER_AT_LEAST_ONCE;
                 }
                 int result = subscribe_mqtt_topics(handle->mqttClient, subscribe, amount, OnSubAckCallback, handle);
+                free(subscribe);
                 ReleaseSubscription(topics, amount);
                 if (0 != result) {
                     LogError("Failure: failed to subscribe the topics.");
