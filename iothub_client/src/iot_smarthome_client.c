@@ -932,7 +932,7 @@ int iot_smarthome_client_connect(IOT_SH_CLIENT_HANDLE handle, const char* userna
     options.clientId = (char *) deviceId;
     options.username = (char *) username;
     options.password = NULL;
-    options.keepAliveInterval = 300;
+    options.keepAliveInterval = 10;
     options.retryTimeoutInSeconds = 300;
     options.client_cert = (char *) client_cert;
     options.client_key = (char *) client_key;
