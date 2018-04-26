@@ -1,0 +1,132 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7208b2e..4b0b6f8 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -49,6 +49,8 @@ endif()
+ option(use_cyclonessl "set use_cyclonessl to ON if cyclonessl is to be used, set to OFF to not use cyclonessl" OFF)
+ option(no_logging "disable logging (default is OFF)" OFF)
+ 
++option(use_mbedtls "enable use_mbedtls if your platform doesn't supports mbedtls rather than openssl" ON)
++
+ # The options setting for use_socketio is not reliable. If openssl is used, make sure it's on,
+ # and if apple tls is used then use_socketio must be off.
+ if (MACOSX)
+@@ -206,6 +208,10 @@ elseif(UNIX) #LINUX OR APPLE
+     endif()
+ endif()
+ 
++if(${use_mbedtls})
++    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_MBED_TLS")
++    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUSE_MBED_TLS")
++endif()
+ 
+ include_directories(${UMOCK_C_INC_FOLDER})
+ 
+@@ -298,6 +304,11 @@ if(${use_applessl})
+     )
+     include_directories(./pal/ios-osx/)
+ endif()
++if (${use_mbedtls})
++    set(source_c_files ${source_c_files}
++            ./adapters/tlsio_mbedtls.c
++            )
++endif()
+ 
+ #these are the C headers
+ set(source_h_files
+@@ -416,6 +427,11 @@ if(${use_applessl})
+     )
+     include_directories(./pal/ios-osx/)
+ endif()
++if (${use_mbedtls})
++    set(source_h_files ${source_h_files}
++            ./inc/azure_c_shared_utility/tlsio_mbedtls.h
++            )
++endif()
+ 
+ #this is the product (a library)
+ add_library(aziotsharedutil ${source_c_files} ${source_h_files})
+@@ -537,6 +553,16 @@ if(LINUX)
+ endif()
+ 
+ target_link_libraries(aziotsharedutil ${aziotsharedutil_target_libs})
++
++if (${use_mbedtls})
++    set(mbedlibs
++            mbedtls
++            mbedcrypto
++            mbedx509
++            )
++    target_link_libraries(aziotsharedutil ${aziotsharedutil_target_libs} ${mbedlibs})
++endif()
++
+ if(${build_as_dynamic})
+     target_link_libraries(aziotsharedutil_dll ${aziotsharedutil_target_libs})
+ endif()
+diff --git a/adapters/platform_linux.c b/adapters/platform_linux.c
+index 5111c01..2710f5b 100644
+--- a/adapters/platform_linux.c
++++ b/adapters/platform_linux.c
+@@ -4,6 +4,7 @@
+ #include "azure_c_shared_utility/platform.h"
+ #include "azure_c_shared_utility/xio.h"
+ #include "azure_c_shared_utility/xlogging.h"
++#include <azure_c_shared_utility/tlsio_mbedtls.h>
+ #ifdef USE_OPENSSL
+ #include "azure_c_shared_utility/tlsio_openssl.h"
+ #endif
+@@ -20,24 +21,25 @@
+ 
+ int platform_init(void)
+ {
+-    int result;
+-#ifdef USE_OPENSSL
++    int result = 0;
++/*#ifdef USE_OPENSSL
+     result = tlsio_openssl_init();
+ #else
+     result = 0;
+-#endif
++#endif*/
+     return result;
+ }
+ 
+ const IO_INTERFACE_DESCRIPTION* platform_get_default_tlsio(void)
+ {
+-#if USE_CYCLONESSL
++/*#if USE_CYCLONESSL
+     return tlsio_cyclonessl_get_interface_description();
+ #elif USE_WOLFSSL
+     return tlsio_wolfssl_get_interface_description();
+ #else
+     return tlsio_openssl_get_interface_description();
+-#endif
++#endif*/
++    return tlsio_mbedtls_get_interface_description();
+ }
+ 
+ STRING_HANDLE platform_get_platform_info(void)
+@@ -62,7 +64,7 @@ STRING_HANDLE platform_get_platform_info(void)
+ 
+ void platform_deinit(void)
+ {
+-#ifdef USE_OPENSSL
++/*#ifdef USE_OPENSSL
+     tlsio_openssl_deinit();
+-#endif
++#endif*/
+ }
+diff --git a/inc/azure_c_shared_utility/tls_config.h b/inc/azure_c_shared_utility/tls_config.h
+index b989950..afddca6 100644
+--- a/inc/azure_c_shared_utility/tls_config.h
++++ b/inc/azure_c_shared_utility/tls_config.h
+@@ -5,6 +5,8 @@
+ 
+ // WolfSSL or mbedTLS
+ //#define USE_WOLF_SSL
++#ifndef USE_MBED_TLS
+ #define USE_MBED_TLS
++#endif
+ 
+ #endif // __TLS_CONFIG_H__
+\ No newline at end of file

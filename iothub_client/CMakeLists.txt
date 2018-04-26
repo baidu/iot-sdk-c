@@ -28,6 +28,8 @@ option(sqlite_persistence "set sqlite_persistence to ON which enable use sqlite 
 option(device_management "set iotdm_client to OFF to skip building for iot device mangement client. Default is ON" ON)
 option(bos "set bos to OFF to skip building for bos client. Default is ON" ON)
 option(iot_smarthome "set iot_smarthome to OFF to skip building for iot smarthome client. Default is ON" ON)
+option(openssl_enable "set use_openssl to ON if your platform supports openssl" ON)
+#option(mbedtls_enable "set use mbedtls to ON if your platform supports mbedtls" ON)
 
 include_directories(../certs)
 
@@ -67,9 +69,26 @@ if (${bos})
 endif()
 
 if (${iot_smarthome})
+
     include_directories(../parson)
     set(iothub_client_c_files ${iothub_client_c_files} ../parson/parson.c ./src/iot_smarthome_client.c)
-    set(iothub_client_h_files ${iothub_client_h_files} ../parson/parson.h ./inc/iot_smarthome_client.h ./inc/iot_smarthome_callback.h)
+    set(iothub_client_h_files ${iothub_client_h_files} ../parson/parson.h ./inc/iot_smarthome_client.h ./inc/iot_smarthome_callback.h inc/rsa_signer.h)
+
+    if (${openssl_enable})
+        if("${OPENSSL_ROOT_DIR}" STREQUAL "" AND NOT ("$ENV{OpenSSLDir}" STREQUAL ""))
+            set(OPENSSL_ROOT_DIR $ENV{OpenSSLDir} CACHE PATH "")
+        endif()
+        find_package(OpenSSL REQUIRED)
+        include_directories(${OPENSSL_INCLUDE_DIR})
+        set(iothub_client_c_files ${iothub_client_c_files} src/rsa_signer/rsa_signer_openssl.c)
+    elseif(${mbedtls_enable})
+        set(mbedlibs
+                mbedtls
+                mbedcrypto
+                mbedx509
+                )
+        set(iothub_client_c_files ${iothub_client_c_files} src/rsa_signer/rsa_signer_mbedtls.c)
+    endif()
 endif()
 
 include_directories(${AZURE_C_SHARED_UTILITY_INCLUDES})
@@ -114,9 +133,12 @@ else()
             )
 endif()
 
+if(${mbedtls_enable})
+target_link_libraries(iothub_client ${iothub_client_libs} ${mbedlibs})
+endif()
+
 linkSharedUtil(iothub_client)
 set(iothub_client_libs
         iothub_client
         ${iothub_client_libs}
         )
-

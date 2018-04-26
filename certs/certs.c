@@ -57,8 +57,7 @@ const char certificates[] =
         "0fxQ8ANAe4hZ7Q7drNJ3gjTcBpUC2JD5Leo31Rpg0Gcg19hCC0Wvgmje3WYkN5Ap\n"
         "lBlGGSW4gNfL1IYoakRwJiNiqZ+Gb7+6kHDSVneFeO/qJakXzlByjAA6quPbYzSf\n"
         "+AZxAeKCINT+b72x\n"
-        "-----END CERTIFICATE-----\n"
-;
+        "-----END CERTIFICATE-----\n";
 
 const char bos_root_ca[] = "-----BEGIN CERTIFICATE-----\n"
     "MIIE0zCCA7ugAwIBAgIQGNrRniZ96LtKIVjNzGs7SjANBgkqhkiG9w0BAQUFADCB\n"
