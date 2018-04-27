@@ -914,13 +914,6 @@ static size_t CalTopicSize(IOTDM_CLIENT_HANDLE handle)
     return handle->enableOta ? SUB_TOPIC_SIZE + SUB_METHOD_TOPIC_SIZE : SUB_TOPIC_SIZE;
 }
 
-static char* GenRequestId()
-{
-    UUID uuid;
-    UUID_generate(&uuid);
-    return UUID_to_string(&uuid);
-}
-
 /* Send a Method request to cloud */
 static int SendMethodReq(const IOTDM_CLIENT_HANDLE handle, const char *device, const char *methodName, JSON_Value *payload,
                   const char *requestId) {
@@ -1002,7 +995,7 @@ void iotdm_client_deinit(IOTDM_CLIENT_HANDLE handle)
     if (NULL != handle)
     {
         size_t topicSize = CalTopicSize(handle);
-        char** topics = malloc(topicSize);
+        char** topics = malloc(topicSize * sizeof(char*));
         if (topics == NULL)
         {
             LogError("Failure: failed to alloc");
@@ -1081,7 +1074,7 @@ int iotdm_client_dowork(const IOTDM_CLIENT_HANDLE handle)
         double elipsed = difftime(current, handle->subscribeSentTimestamp);
         if (elipsed > 10) {
             size_t topicSize = CalTopicSize(handle);
-            char** topics = malloc(topicSize);
+            char** topics = malloc(topicSize * sizeof(char*));
             if (topics == NULL)
             {
                 LogError("Failure: failed to alloc");
@@ -1097,7 +1090,7 @@ int iotdm_client_dowork(const IOTDM_CLIENT_HANDLE handle)
             }
             else if (amount > 0)
             {
-                SUBSCRIBE_PAYLOAD subscribe[topicSize];
+                SUBSCRIBE_PAYLOAD* subscribe = malloc(topicSize * sizeof(SUBSCRIBE_PAYLOAD));
                 for (size_t index = 0; index < (size_t)amount; ++index)
                 {
                     subscribe[index].subscribeTopic = topics[index];
@@ -1109,6 +1102,7 @@ int iotdm_client_dowork(const IOTDM_CLIENT_HANDLE handle)
                     handle->subscribeSentTimestamp = time(NULL);
                 }
                 ReleaseSubscription(topics, topicSize);
+                free(subscribe);
                 free(topics);
                 if (0 != result)
                 {
