@@ -116,6 +116,9 @@ if (LINUX)
         # now all static libraries use PIC flag for Python shared lib
         set(CMAKE_C_FLAGS "-fPIC ${CMAKE_C_FLAGS}")
         set(CMAKE_CXX_FLAGS "-fPIC ${CMAKE_CXX_FLAGS}")
+        # Report error for variable length array
+        set(CMAKE_C_FLAGS "-Wvla ${CMAKE_C_FLAGS}")
+        set(CMAKE_CXX_FLAGS "-Wvla ${CMAKE_CXX_FLAGS}")
     endif()
 endif()
 
