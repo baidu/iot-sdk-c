@@ -30,6 +30,7 @@ option(bos "set bos to OFF to skip building for bos client. Default is ON" ON)
 option(iot_smarthome "set iot_smarthome to OFF to skip building for iot smarthome client. Default is ON" ON)
 option(openssl_enable "set use_openssl to ON if your platform supports openssl" ON)
 #option(mbedtls_enable "set use mbedtls to ON if your platform supports mbedtls" ON)
+#option(wolfssl_enable "set this if your platform supports wolfssl" ON)
 
 include_directories(../certs)
 
@@ -88,6 +89,10 @@ if (${iot_smarthome})
                 mbedx509
                 )
         set(iothub_client_c_files ${iothub_client_c_files} src/rsa_signer/rsa_signer_mbedtls.c)
+    elseif(${wolfssl_enable})
+        set(wolfssllibs
+                wolfssl)
+        set(iothub_client_c_files ${iothub_client_c_files} src/rsa_signer/rsa_signer_wolfssl.c)
     endif()
 endif()
 
@@ -135,6 +140,10 @@ endif()
 
 if(${mbedtls_enable})
 target_link_libraries(iothub_client ${iothub_client_libs} ${mbedlibs})
+endif()
+
+if(${wolfssl_enable})
+    target_link_libraries(iothub_client ${iothub_client_libs} ${wolfssllibs})
 endif()
 
 linkSharedUtil(iothub_client)
