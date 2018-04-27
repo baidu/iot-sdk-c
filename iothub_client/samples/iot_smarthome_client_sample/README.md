@@ -34,7 +34,7 @@ iot_smarthome_client基于mqtt协议连接到设备管理平台云端。他可�
 如果是网关代理子设备的场景，需要先激活网关，然后再使用子设备信息+已激活网关的信息去激活子设备后，网关方可启用对该子设备的代理功能。网关本身的激活同普通设备的激活。
 
 ### 2. 基于证书私钥计算数字签名
-为了校验激活接口的触发者是设备证书的合法所有者，云端激活接口需要使用基于设备证书私钥进行RSA SHA256数字签名。出于安全考虑，建议将签名过程放在设备端执行，本sdk中提供了openssl和mbedtls两个版本的数字签名功能，使用示例如下。如果你不选择在设备端进行数字签名，可以跳过本节。
+为了校验激活接口的触发者是设备证书的合法所有者，云端激活接口需要使用基于设备证书私钥进行RSA SHA256数字签名。出于安全考虑，建议将签名过程放在设备端执行，本sdk中提供了openssl、mbedtls、wolfssl三个版本的数字签名功能，使用示例如下。如果你不选择在设备端进行数字签名，可以跳过本节。
 ```
 static char * client_cert = "-----BEGIN CERTIFICATE-----\r\n"
         "you client cert\r\n"
@@ -64,10 +64,11 @@ else {
 }
 ```
 
-openssl或mbedtls的选择在iothub_client/CmakeLists.txt中指定，用户需根据自己平台支持情况进行选择。
+openssl，mbedtls,wolfssl的选择在iothub_client/CmakeLists.txt中指定，用户需根据自己平台支持情况进行选择。
 ```
 option(openssl_enable "set use_openssl to ON if your platform supports openssl" ON)
 #option(mbedtls_enable "set use mbedtls to ON if your platform supports mbedtls" ON)
+#option(wolfssl_enable "set this if your platform supports wolfssl" ON)
 ```
 
 ### 3. 定义一个smarthome_client ###
