@@ -302,6 +302,8 @@ static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHA
 
 static void HandleOtaReportResult(const SHADOW_MESSAGE_CONTEXT* messageContext, void* callbackContext);
 
+static void HandleSubDevices(const SHADOW_MESSAGE_CONTEXT *messageContext, const SHADOW_SUB_DEVICES *subDevices, void *callbackContext);
+
 int iot_smarthome_client_run(bool isGatewayDevice)
 {
     isGateway = isGatewayDevice;
@@ -334,6 +336,7 @@ int iot_smarthome_client_run(bool isGatewayDevice)
     iot_smarthome_client_register_update_snapshot(handle, HandleUpdateSnapshot, handle);
     iot_smarthome_client_ota_register_job(handle, HandleOtaJob, handle);
     iot_smarthome_client_ota_register_report_result(handle, HandleOtaReportResult, handle);
+    iot_smarthome_client_register_get_sub_devices(handle, HandleSubDevices, handle);
 
     // do sha256 rsa signature and verification
     unsigned char* data = (unsigned char*)"123456";
@@ -431,6 +434,19 @@ int iot_smarthome_client_run(bool isGatewayDevice)
             Log("Failed to send message for updating device shadow with binary");
         }
 
+        if (isGateway)
+        {
+            result = iot_smarthome_client_get_sub_devices(handle, DEVICE, "233333");
+            if (0 == result)
+            {
+                Log("Succeeded to send message for getting sub devices");
+            }
+            else
+            {
+                Log("Failed to send message for getting sub devices");
+            }
+        }
+
         free(reportedString);
         free(reported);
     }
@@ -503,4 +519,13 @@ static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHA
 static void HandleOtaReportResult(const SHADOW_MESSAGE_CONTEXT* messageContext, void* callbackContext)
 {
     Log("OTA result reported");
+}
+
+static void HandleSubDevices(const SHADOW_MESSAGE_CONTEXT *messageContext, const SHADOW_SUB_DEVICES *subDevices, void *callbackContext)
+{
+    LogInfo("Get %d sub device ids", subDevices->count);
+    for (size_t i = 0; i < subDevices->count; i++)
+    {
+        Log(subDevices->puids[i]);
+    }
 }

@@ -82,6 +82,7 @@
 #define     METHOD_DO_FIRMWARE_UPDATE       "doFirmwareUpdate"
 #define     METHOD_REPORT_FIRMWARE_UPDATE_START     "reportFirmwareUpdateStart"
 #define     METHOD_REPORT_FIRMWARE_UPDATE_RESULT    "reportFirmwareUpdateResult"
+#define     METHOD_GET_SUB_DEVICES          "getSubDevices"
 
 typedef struct SHADOW_CALLBACK_TAG
 {
@@ -95,6 +96,7 @@ typedef struct SHADOW_CALLBACK_TAG
     SHADOW_OTA_JOB_CALLBACK otaJob;
     SHADOW_OTA_REPORT_RESULT_CALLBACK otaReportStart;
     SHADOW_OTA_REPORT_RESULT_CALLBACK otaReportResult;
+    SHADOW_GET_SUB_DEVICES_CALLBACK getSubDevices;
 } SHADOW_CALLBACK;
 
 typedef struct SHADOW_CALLBACK_CONTEXT_TAG
@@ -109,6 +111,7 @@ typedef struct SHADOW_CALLBACK_CONTEXT_TAG
     void* otaJob;
     void* otaReportStart;
     void* otaReportResult;
+    void* getSubDevices;
 } SHADOW_CALLBACK_CONTEXT;
 
 typedef struct IOT_SH_CLIENT_TAG
@@ -511,6 +514,7 @@ static void OnRecvCallbackForMethodResp(const IOT_SH_CLIENT_HANDLE handle, const
     } else {
         double status = json_object_get_number(root, KEY_STATUS);
         JSON_Object* payload = json_object_get_object(root, KEY_PAYLOAD);
+        JSON_Array * payloadArray = json_object_get_array(root, KEY_PAYLOAD);
         if (strcmp(methodName, METHOD_GET_FIRMWARE) == 0)
         {
             // Handle response for get firmware
@@ -560,6 +564,28 @@ static void OnRecvCallbackForMethodResp(const IOT_SH_CLIENT_HANDLE handle, const
             else
             {
                 LogError("Unexpected response. %d", status);
+            }
+        }
+        else if (strcmp(methodName, METHOD_GET_SUB_DEVICES) == 0)
+        {
+            if (status == 404)
+            {
+                // no gateway device
+            }
+            else if (status == 200)
+            {
+                if (NULL != handle->callback.getSubDevices)
+                {
+                    SHADOW_SUB_DEVICES subDevices;
+                    size_t count = json_array_get_count(payloadArray);
+                    subDevices.count = count;
+                    subDevices.puids = malloc(sizeof(char*) * count);
+                    for (size_t i = 0; i < count; i++)
+                    {
+                        subDevices.puids[i] = json_array_get_string(payloadArray, i);
+                    }
+                    (*(handle->callback.getSubDevices))(msgContext, &subDevices, handle->context.getSubDevices);
+                }
             }
         }
         else
@@ -1151,6 +1177,19 @@ int iot_smarthome_client_update_subdevice_shadow_with_binary(const IOT_SH_CLIENT
     int result = iot_smarthome_client_update_shadow_with_binary(handle, pubObject, requestId, version, reported, lastUpdatedTime);
     free(pubObject);
     return result;
+}
+
+void iot_smarthome_client_register_get_sub_devices(const IOT_SH_CLIENT_HANDLE handle, SHADOW_GET_SUB_DEVICES_CALLBACK callback,
+                                                   void *callbackContext)
+{
+    handle->callback.getSubDevices = callback;
+    handle->context.getSubDevices = callbackContext;
+}
+
+int iot_smarthome_client_get_sub_devices(const IOT_SH_CLIENT_HANDLE handle, const char *device, const char *requestId)
+{
+    JSON_Value* request = json_value_init_object();
+    return SendMethodReq(handle, device, METHOD_GET_SUB_DEVICES, request, requestId);
 }
 
 void iot_smarthome_client_ota_register_job(const IOT_SH_CLIENT_HANDLE handle, SHADOW_OTA_JOB_CALLBACK callback,

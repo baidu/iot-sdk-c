@@ -84,6 +84,12 @@ typedef struct SHADOW_OTA_JOB_INFO_TAG
     const char *firmwareVersion;
 } SHADOW_OTA_JOB_INFO;
 
+typedef struct SHADOW_SUB_DEVICES_TAG
+{
+    const char **puids;
+    size_t  count;
+} SHADOW_SUB_DEVICES;
+
 typedef void (*SHADOW_DELTA_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON_Object* desired, void* callbackContext);
 typedef void (*SHADOW_ERROR_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext);
 typedef void (*SHADOW_ACCEPTED_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext);
@@ -92,6 +98,7 @@ typedef void (*SHADOW_SNAPSHOT_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageC
 
 typedef void (*SHADOW_OTA_JOB_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_OTA_JOB_INFO* otaJobInfo, void* callbackContext);
 typedef void (*SHADOW_OTA_REPORT_RESULT_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* messageContext, void* callbackContext);
+typedef void (*SHADOW_GET_SUB_DEVICES_CALLBACK) (const SHADOW_MESSAGE_CONTEXT* message_context, const SHADOW_SUB_DEVICES* subDevices, void* callbackContext);
 
 #ifdef __cplusplus
 }
