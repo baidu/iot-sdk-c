@@ -44,8 +44,8 @@ void on_recv_callback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
     (void)printf("Incoming Msg: Packet Id: %d\r\nQOS: %s\r\nTopic Name: %s\r\nIs Retained: %s\r\nIs Duplicate: %s\r\nApp Msg: ", mqttmessage_getPacketId(msgHandle),
                  QosToString(mqttmessage_getQosType(msgHandle) ),
                  mqttmessage_getTopicName(msgHandle),
-                 mqttmessage_getIsRetained(msgHandle) ? "true" : "fale",
-                 mqttmessage_getIsDuplicateMsg(msgHandle) ? "true" : "fale"
+                 mqttmessage_getIsRetained(msgHandle) ? "true" : "false",
+                 mqttmessage_getIsDuplicateMsg(msgHandle) ? "true" : "false"
     );
 
     bool isValidUtf8 = utf8_checker_is_valid_utf8((unsigned char *)appMsg->message, appMsg->length);

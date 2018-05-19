@@ -17,8 +17,8 @@
 * limitations under the License.
 */
 
-#ifndef IOTDM_CALLBACK_H
-#define IOTDM_CALLBACK_H
+#ifndef IOT_SH_CALLBACK_H
+#define IOT_SH_CALLBACK_H
 
 #ifdef __cplusplus
 #include <cstdint>
@@ -38,8 +38,6 @@ typedef enum SHADOW_CALLBACK_TYPE_TAG
     SHADOW_CALLBACK_TYPE_UPDATE_REJECTED,
     SHADOW_CALLBACK_TYPE_UPDATE_DOCUMENTS,
     SHADOW_CALLBACK_TYPE_UPDATE_SNAPSHOT,
-    SHADOW_CALLBACK_TYPE_DELETE_ACCEPTED,
-    SHADOW_CALLBACK_TYPE_DELETE_REJECTED,
     SHADOW_CALLBACK_TYPE_METHOD_RESP,
     SHADOW_CALLBACK_TYPE_METHOD_REQ,
 } SHADOW_CALLBACK_TYPE;
@@ -53,7 +51,8 @@ typedef struct SHADOW_ERROR_TAG
 typedef struct SHADOW_MESSAGE_CONTEXT_TAG
 {
     const char* requestId;
-    char* device;
+    char* device; // or gateway deviceId
+    char* subdevice;
 } SHADOW_MESSAGE_CONTEXT;
 
 typedef struct SHADOW_ACCEPTED_TAG
@@ -98,4 +97,4 @@ typedef void (*SHADOW_OTA_REPORT_RESULT_CALLBACK) (const SHADOW_MESSAGE_CONTEXT*
 }
 #endif // __cplusplus
 
-#endif // IOTDM_CALLBACK_H
+#endif // IOT_SH_CALLBACK_H

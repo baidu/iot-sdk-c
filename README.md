@@ -243,5 +243,7 @@ iothub_client_sample依赖openssl库的ssleay32和libeay32，在你使用他们�
 		cmake --build . 
 		ctest -C "debug" -V 
 
+***
+以上是百度IoT edge SDK的C语言版本介绍，若在其他平台上使用，请参考[如何移植百度天工IOT HUB C语言SDK到其他平台](https://github.com/baidu/iot-edge-c-sdk/blob/master/PortingGuide.md).
 
 

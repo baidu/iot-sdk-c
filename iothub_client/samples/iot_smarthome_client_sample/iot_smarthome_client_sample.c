@@ -19,35 +19,38 @@
 
 #include <azure_c_shared_utility/platform.h>
 #include <azure_c_shared_utility/threadapi.h>
-#include <azure_c_shared_utility/buffer_.h>
-#include <bos.h>
+#include <azure_c_shared_utility/uuid.h>
 
-#include "iotdm_callback.h"
-#include "iotdm_client.h"
-#include "iotdm_client_sample.h"
+#include "iot_smarthome_callback.h"
+#include "iot_smarthome_client.h"
+#include "bos.h"
+#include "iot_smarthome_client_sample.h"
 
 // Should include serializer to operate shadow with device model.
 #include "serializer.h"
 
 #define         SPLIT               "--------------------------------------------------------------------------------------------"
 
+// $puid
+#define         DEVICE              "your_puid"
 
-// Please set the device client data and security which are shown as follow.
-// The endpoint address your device should cnnect, which is like
-// 1. "tcp://xxxxxx.mqtt.iot.xx.baidubce.com:1883" or
-// 2. "ssl://xxxxxx.mqtt.iot.xx.baidubce.com:1884"
-#define         ADDRESS             "tcp://xxxxxx.mqtt.iot.xx.baidubce.com:1883"
+// $endpointName/$puid
+#define         USERNAME            "your_endpoint_name/your_puid"
 
-// The device name you created in device management service.
-#define         DEVICE              "xxxxxx"
+// if your device is a gateway, you can add subdevice puids here
+#define         SUBDEVICE           "your_gateway_subdevice_puid"
 
-// The username you can find on the device connection configuration web,
-// and the format is like "xxxxxx/xxxxx"
-#define         USERNAME            "xxxxxx/xxxxxx"
+static char * client_cert = "-----BEGIN CERTIFICATE-----\r\n"
+                            "you client cert\r\n"
+                            "-----END CERTIFICATE-----\r\n";
 
-// The key (password) you can find on the device connection configuration web.
-#define         PASSWORD            "xxxxxx"
+static char * client_key = "-----BEGIN RSA PRIVATE KEY-----\r\n"
+                           "your client key\r\n"
+                           "-----END RSA PRIVATE KEY-----\r\n";
 
+static bool isGateway;
+
+// define your own parameters here
 BEGIN_NAMESPACE(BaiduIotDeviceSample);
 
 DECLARE_MODEL(BaiduSamplePump,
@@ -115,6 +118,11 @@ static void HandleAccepted(const SHADOW_MESSAGE_CONTEXT* messageContext, const S
     Log("Device:");
     Log(messageContext->device);
 
+    if (isGateway == true) {
+        Log("SubDevice:");
+        Log(messageContext->subdevice);
+    }
+
     LogAcceptedMessage(accepted);
 
     if (NULL == callbackContext)
@@ -129,6 +137,10 @@ static void HandleRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, const S
     Log(messageContext->requestId);
     Log("Device:");
     Log(messageContext->device);
+    if (isGateway == true) {
+        Log("SubDevice:");
+        Log(messageContext->subdevice);
+    }
     Log("Code:");
     LogCode(error->code);
     Log("Message:");
@@ -179,7 +191,10 @@ static void HandleUpdateDocuments(const SHADOW_MESSAGE_CONTEXT* messageContext, 
     Log(messageContext->requestId);
     Log("Device:");
     Log(messageContext->device);
-
+    if (isGateway == true) {
+        Log("SubDevice:");
+        Log(messageContext->subdevice);
+    }
     Log("ProfileVersion:");
     LogVersion(documents->profileVersion);
 
@@ -187,7 +202,6 @@ static void HandleUpdateDocuments(const SHADOW_MESSAGE_CONTEXT* messageContext, 
     char* encoded = json_serialize_to_string(value);
     Log("Current:");
     Log(encoded);
-    json_free_serialized_string(encoded);
 
     value = json_object_get_wrapping_value(documents->previous);
     encoded = json_serialize_to_string(value);
@@ -210,7 +224,10 @@ static void HandleUpdateSnapshot(const SHADOW_MESSAGE_CONTEXT* messageContext, c
     Log(messageContext->requestId);
     Log("Device:");
     Log(messageContext->device);
-
+    if (isGateway == true) {
+        Log("SubDevice:");
+        Log(messageContext->subdevice);
+    }
     Log("ProfileVersion:");
     LogVersion(snapshot->profileVersion);
 
@@ -218,7 +235,6 @@ static void HandleUpdateSnapshot(const SHADOW_MESSAGE_CONTEXT* messageContext, c
     char* encoded = json_serialize_to_string(value);
     Log("Reported:");
     Log(encoded);
-    json_free_serialized_string(encoded);
 
     value = json_object_get_wrapping_value(snapshot->lastUpdateTime);
     encoded = json_serialize_to_string(value);
@@ -234,23 +250,6 @@ static void HandleUpdateSnapshot(const SHADOW_MESSAGE_CONTEXT* messageContext, c
     Log(SPLIT);
 }
 
-static void HandleDeleteAccepted(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ACCEPTED* accepted, void* callbackContext)
-{
-    Log("Received a message for shadow delete accepted.");
-    HandleAccepted(messageContext, accepted, callbackContext);
-
-    Log(SPLIT);
-}
-
-static void HandleDeleteRejected(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_ERROR* error, void* callbackContext)
-{
-    Log("Received a message for shadow delete rejected.");
-    HandleRejected(messageContext, error, callbackContext);
-
-    Log(SPLIT);
-}
-
-
 static void HandleDelta(const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON_Object* desired, void* callbackContext)
 {
     Log("Received a message for shadow delta");
@@ -258,7 +257,10 @@ static void HandleDelta(const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON
     Log(messageContext->requestId);
     Log("Device:");
     Log(messageContext->device);
-
+    if (isGateway == true) {
+        Log("SubDevice:");
+        Log(messageContext->subdevice);
+    }
     JSON_Value* value = json_object_get_wrapping_value(desired);
     char* encoded = json_serialize_to_string(value);
     Log("Payload:");
@@ -274,8 +276,10 @@ static void HandleDelta(const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON
     // However, here we only sleep, and then update the device shadow (status in reported payload).
 
     ThreadAPI_Sleep(10);
-    IOTDM_CLIENT_HANDLE handle = (IOTDM_CLIENT_HANDLE)callbackContext;
-    int result = iotdm_client_update_shadow(handle, messageContext->device, messageContext->requestId, 0, value, NULL);
+    IOT_SH_CLIENT_HANDLE handle = (IOT_SH_CLIENT_HANDLE)callbackContext;
+    int result = messageContext->subdevice == NULL
+                 ? iot_smarthome_client_update_shadow(handle, messageContext->device, messageContext->requestId, 0, value, NULL)
+                 : iot_smarthome_client_update_subdevice_shadow(handle, messageContext->device, messageContext->subdevice, messageContext->requestId, 0, value, NULL);
     if (0 == result)
     {
         Log("Have done for the device controller request, and corresponding shadow is updated.");
@@ -288,14 +292,19 @@ static void HandleDelta(const SHADOW_MESSAGE_CONTEXT* messageContext, const JSON
     Log(SPLIT);
 }
 
-static char firmwareVersion[64];
+static char gatewayFirmwareVersion[64];
+
+static char subdeviceFirmwareVersion[64];
+
+static int InitOta(void *handle);
 
 static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_OTA_JOB_INFO* otaJobInfo, void* callbackContext);
 
 static void HandleOtaReportResult(const SHADOW_MESSAGE_CONTEXT* messageContext, void* callbackContext);
 
-int iotdm_client_run(void)
+int iot_smarthome_client_run(bool isGatewayDevice)
 {
+    isGateway = isGatewayDevice;
     Log("The device management edge simulator is starting ...");
     if (0 != platform_init())
     {
@@ -309,50 +318,60 @@ int iotdm_client_run(void)
         return __FAILURE__;
     }
 
-    IOTDM_CLIENT_HANDLE handle = iotdm_client_init(ADDRESS, DEVICE);
+    IOT_SH_CLIENT_HANDLE handle = iot_smarthome_client_init(isGatewayDevice);
     if (NULL == handle)
     {
-        Log("iotdm_client_init failed");
+        Log("iot_smarthome_client_init failed");
         return __FAILURE__;
     }
 
-    iotdm_client_register_delta(handle, HandleDelta, handle);
-    iotdm_client_register_get_accepted(handle, HandleGetAccepted, handle);
-    iotdm_client_register_get_rejected(handle, HandleGetRejected, handle);
-    iotdm_client_register_update_accepted(handle, HandleUpdateAccepted, handle);
-    iotdm_client_register_update_rejected(handle, HandleUpdateRejected, handle);
-    iotdm_client_register_update_documents(handle, HandleUpdateDocuments, handle);
-    iotdm_client_register_update_snapshot(handle, HandleUpdateSnapshot, handle);
-    iotdm_client_register_delete_accepted(handle, HandleDeleteAccepted, handle);
-    iotdm_client_register_delete_rejected(handle, HandleDeleteRejected, handle);
+    iot_smarthome_client_register_delta(handle, HandleDelta, handle);
+    iot_smarthome_client_register_get_accepted(handle, HandleGetAccepted, handle);
+    iot_smarthome_client_register_get_rejected(handle, HandleGetRejected, handle);
+    iot_smarthome_client_register_update_accepted(handle, HandleUpdateAccepted, handle);
+    iot_smarthome_client_register_update_rejected(handle, HandleUpdateRejected, handle);
+    iot_smarthome_client_register_update_documents(handle, HandleUpdateDocuments, handle);
+    iot_smarthome_client_register_update_snapshot(handle, HandleUpdateSnapshot, handle);
+    iot_smarthome_client_ota_register_job(handle, HandleOtaJob, handle);
+    iot_smarthome_client_ota_register_report_result(handle, HandleOtaReportResult, handle);
 
-    iotdm_client_ota_register_job(handle, HandleOtaJob, handle);
-    iotdm_client_ota_register_report_result(handle, HandleOtaReportResult, handle);
+    // do sha256 rsa signature and verification
+    unsigned char* data = (unsigned char*)"123456";
+    const char* signature = computeSignature(data, client_key);
+    if (signature == NULL) {
+        LogError("compute Signature failed");
+        return __FAILURE__;
+    }
 
-    IOTDM_CLIENT_OPTIONS options;
-    options.cleanSession = true;
-    options.clientId = DEVICE;
-    options.username = USERNAME;
-    options.password = PASSWORD;
-    options.keepAliveInterval = 5;
-    options.retryTimeoutInSeconds = 300;
-    options.enableOta = true;
+    LogInfo("rsa sha256 signature of %s is %s", data, signature);
 
-    if (0 != iotdm_client_connect(handle, &options))
+    int sigRet = verifySignature(data, client_cert, signature);
+
+    if (sigRet == 0) {
+        LogInfo("verify signature success");
+    }
+    else {
+        LogError("verify signature fail");
+        return __FAILURE__;
+    }
+
+    strncpy(gatewayFirmwareVersion, "0.1.0", 64);
+    strncpy(subdeviceFirmwareVersion, "0.1.0", 64);
+
+    if (0 != iot_smarthome_client_connect(handle, USERNAME, DEVICE, client_cert, client_key))
     {
-        iotdm_client_deinit(handle);
-        Log("iotdm_client_connect failed");
+        iot_smarthome_client_deinit(handle);
+        Log("iot_smarthome_client_connect failed");
         return __FAILURE__;
     }
-
-    strncpy(firmwareVersion, "0.1.0", 64);
 
     // Subscribe the topics.
-    iotdm_client_dowork(handle);
-    iotdm_client_ota_get_job(handle, firmwareVersion, "1234");
+    iot_smarthome_client_dowork(handle);
 
     // Sample: get device shadow
-    if (0 == iotdm_client_get_shadow(handle, DEVICE, "123456789"))
+    int result = isGateway ? iot_smarthome_client_get_subdevice_shadow(handle, DEVICE, SUBDEVICE, "123456789")
+                           : iot_smarthome_client_get_shadow(handle, DEVICE, "123456789");
+    if (0 == result)
     {
         Log("Succeeded to get device shadow");
     }
@@ -388,7 +407,10 @@ int iotdm_client_run(void)
             reportedString[index] = reported[index];
         }
 
-        if (0 == iotdm_client_update_shadow_with_binary(handle, DEVICE, "123456", 0, reportedString, NULL))
+        result = isGatewayDevice
+                 ? iot_smarthome_client_update_subdevice_shadow_with_binary(handle, DEVICE, SUBDEVICE, "123456", 0, reportedString, NULL)
+                : iot_smarthome_client_update_shadow_with_binary(handle, DEVICE, "123456", 0, reportedString, NULL);
+        if (0 == result)
         {
             Log("Succeeded to update device shadow with binary");
         }
@@ -398,7 +420,9 @@ int iotdm_client_run(void)
         }
 
         // Sample: update shadow with incorrect version, and receive error message at 'update/rejected'.
-        if (0 == iotdm_client_update_shadow_with_binary(handle, DEVICE, "111111", 1, reportedString, NULL))
+        result = isGateway ? iot_smarthome_client_update_subdevice_shadow_with_binary(handle, DEVICE, SUBDEVICE, "111111", 1, reportedString, NULL)
+                           : iot_smarthome_client_update_shadow_with_binary(handle, DEVICE, "111111", 1, reportedString, NULL);
+        if (0 == result)
         {
             Log("Succeeded to send message for updating device shadow with binary");
         }
@@ -413,23 +437,21 @@ int iotdm_client_run(void)
 
     DESTROY_MODEL_INSTANCE(pump);
 
-    // Sample: delete the shadow
-    if (0 == iotdm_client_delete_shadow(handle, DEVICE, "222222"))
+    // Report firmware version and get OTA job
+    iot_smarthome_client_ota_get_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, gatewayFirmwareVersion, "1234");
+    if (isGateway)
     {
-        Log("Succeeded to get device shadow");
-    }
-    else
-    {
-        Log("Failed to get device shadow");
+        iot_smarthome_client_ota_get_subdevice_job((IOT_SH_CLIENT_HANDLE) handle, DEVICE, SUBDEVICE,
+                                                   subdeviceFirmwareVersion, "2345");
     }
 
     // Sample: subscribe the delta topic and update shadow with desired value.
-    while (iotdm_client_dowork(handle) >= 0)
+    while (iot_smarthome_client_dowork(handle) >= 0)
     {
         ThreadAPI_Sleep(100);
     }
 
-    iotdm_client_deinit(handle);
+    iot_smarthome_client_deinit(handle);
     serializer_deinit();
     platform_deinit();
 
@@ -440,35 +462,42 @@ int iotdm_client_run(void)
 #endif
 }
 
+static char lastJobId[64];
+
 static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHADOW_OTA_JOB_INFO* otaJobInfo, void* callbackContext)
 {
-    LogInfo("Received an OTA job for %s", messageContext->device);
+    const char *actualDevice = messageContext->subdevice == NULL ? messageContext->device : messageContext->subdevice;
+    LogInfo("Received an OTA job for %s", actualDevice);
+    if (0 == strcmp(lastJobId, otaJobInfo->jobId))
+    {
+        // Given AT_LEAST_ONCE QoS, we have to consider the situation that the ota job may be sent multiple times.
+        return;
+    }
     // Pull OTA file
     unsigned int status;
-    IOTDM_CLIENT_HANDLE handle = (IOTDM_CLIENT_HANDLE)callbackContext;
-
-    if (0 == strcmp(firmwareVersion, otaJobInfo->firmwareVersion))
+    BUFFER_HANDLE firmwareBuffer = BUFFER_new();
+    BOS_RESULT result = BOS_Download_Presigned(otaJobInfo->firmwareUrl, NULL, NULL, &status, firmwareBuffer);
+    if (result != BOS_OK)
     {
-        // No need to update.
-        iotdm_client_ota_report_result(handle, otaJobInfo->jobId, true, "2345");
+        LogError("Failed to download from BOS");
+    }
+    // Flash the firmware
+    BUFFER_delete(firmwareBuffer);
+    IOT_SH_CLIENT_HANDLE handle = (IOT_SH_CLIENT_HANDLE)callbackContext;
+    // Report result
+    if (messageContext->subdevice == NULL)
+    {
+        iot_smarthome_client_ota_report_start(handle, messageContext->device, otaJobInfo->jobId, "2345");
+        strncpy(gatewayFirmwareVersion, otaJobInfo->firmwareVersion, 64);
+        iot_smarthome_client_ota_report_result(handle, messageContext->device, otaJobInfo->jobId, true, "2345");
     }
     else
     {
-        BUFFER_HANDLE firmwareBuffer = BUFFER_new();
-        BOS_RESULT result = BOS_Download_Presigned(otaJobInfo->firmwareUrl, NULL, NULL, &status, firmwareBuffer);
-        if (result != BOS_OK)
-        {
-            LogError("Failed to download from BOS");
-        }
-        // Flash the firmware
-        BUFFER_delete(firmwareBuffer);
-
-        // Report result
-
-        iotdm_client_ota_report_start(handle, otaJobInfo->jobId, "1234");
-        strncpy(firmwareVersion, otaJobInfo->firmwareVersion, 64);
-        iotdm_client_ota_report_result(handle, otaJobInfo->jobId, true, "3456");
+        iot_smarthome_client_ota_report_subdevice_start(handle, messageContext->device, messageContext->subdevice, otaJobInfo->jobId, "2345");
+        strncpy(subdeviceFirmwareVersion, otaJobInfo->firmwareVersion, 64);
+        iot_smarthome_client_ota_report_subdevice_result(handle, messageContext->device, messageContext->subdevice, otaJobInfo->jobId, true, "2345");
     }
+    strcpy(lastJobId, otaJobInfo->jobId);
 }
 
 static void HandleOtaReportResult(const SHADOW_MESSAGE_CONTEXT* messageContext, void* callbackContext)
