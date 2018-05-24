@@ -452,12 +452,10 @@ static void OnRecvCallbackForMethodReq(const IOT_SH_CLIENT_HANDLE handle, const 
                                        const SHADOW_MESSAGE_CONTEXT *msgContext, const JSON_Object *root,
                                        const APP_PAYLOAD* payload)
 {
-    char *message = malloc(payload->length + 1);
+    STRING_HANDLE message = STRING_from_byte_array(payload->message, payload->length);
     if (message != NULL) {
-        strncpy(message, payload->message, payload->length);
-        message[payload->length] = '\0';
-        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method request:\n%s\n%s", topic, message);
-        free(message);
+        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method request:\n%s\n%s", topic, STRING_c_str(message));
+        STRING_delete(message);
     }
     else
     {
@@ -493,12 +491,10 @@ static void OnRecvCallbackForMethodResp(const IOT_SH_CLIENT_HANDLE handle, const
                                         const SHADOW_MESSAGE_CONTEXT *msgContext, const JSON_Object *root,
                                         const APP_PAYLOAD* payload)
 {
-    char *message = malloc(payload->length + 1);
+    STRING_HANDLE message = STRING_from_byte_array(payload->message, payload->length);
     if (message != NULL) {
-        strncpy(message, payload->message, payload->length);
-        message[payload->length] = '\0';
-        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method response:\n%s\n%s", topic, message);
-        free(message);
+        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method response:\n%s\n%s", topic, STRING_c_str(message));
+        STRING_delete(message);
     }
     else
     {
@@ -600,12 +596,21 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
         return;
     }
 
-    JSON_Value* data = json_parse_string((char*) payload->message);
+    STRING_HANDLE jsonData = STRING_from_byte_array(payload->message, payload->length);
+    if (jsonData == NULL)
+    {
+        LogError("Failure: failed to copy MQTT payload.");
+        free(msgContext.device);
+        return ;
+    }
+
+    JSON_Value* data = json_parse_string(STRING_c_str(jsonData));
     if (NULL == data)
     {
         LogError("Failure: failed to deserialize the payload to json.");
         free(msgContext.device);
         free(msgContext.subdevice);
+        STRING_delete(jsonData);
         return;
     }
 
@@ -660,6 +665,7 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
         }
     }
 
+    STRING_delete(jsonData);
     free(msgContext.device);
     free(msgContext.subdevice);
     json_value_free(data);
