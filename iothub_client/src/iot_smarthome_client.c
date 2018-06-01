@@ -19,6 +19,7 @@
 
 #include <azure_c_shared_utility/xlogging.h>
 #include <azure_c_shared_utility/strings.h>
+#include <azure_c_shared_utility/threadapi.h>
 #include <rsa_signer.h>
 #include "iot_smarthome_client.h"
 #include "iothub_mqtt_client.h"
@@ -44,6 +45,7 @@
 #define     PUB_METHOD_CLOUD_REQ            "$baidu/iot/shadow/%s/method/cloud/req"
 #define     PUB_METHOD_DEVICE_RESP          "$baidu/iot/shadow/%s/method/device/resp"
 #define     GATEWAY_SUBDEVICE_PUB_OBJECT    "%s/subdevice/%s"
+#define     SUBDEVICE_TAG                   "/subdevice/"
 
 #define     SUB_DELTA                       "$baidu/iot/shadow/%s/delta"
 #define     SUB_GET_ACCEPTED                "$baidu/iot/shadow/%s/get/accepted"
@@ -96,7 +98,6 @@ typedef struct SHADOW_CALLBACK_TAG
     SHADOW_OTA_JOB_CALLBACK otaJob;
     SHADOW_OTA_REPORT_RESULT_CALLBACK otaReportStart;
     SHADOW_OTA_REPORT_RESULT_CALLBACK otaReportResult;
-    SHADOW_GET_SUB_DEVICES_CALLBACK getSubDevices;
 } SHADOW_CALLBACK;
 
 typedef struct SHADOW_CALLBACK_CONTEXT_TAG
@@ -111,20 +112,22 @@ typedef struct SHADOW_CALLBACK_CONTEXT_TAG
     void* otaJob;
     void* otaReportStart;
     void* otaReportResult;
-    void* getSubDevices;
 } SHADOW_CALLBACK_CONTEXT;
 
 typedef struct IOT_SH_CLIENT_TAG
 {
     bool subscribed;
-    time_t subscribeSentTimestamp;
-    char* endpoint;
-    char* name;
+    TICK_COUNTER_HANDLE tickCounter;
+    tickcounter_ms_t subscribeSentTick;
+    char *endpoint;
+    char *name;
     IOTHUB_MQTT_CLIENT_HANDLE mqttClient;
     MQTT_CONNECTION_TYPE mqttConnType;
     SHADOW_CALLBACK callback;
     SHADOW_CALLBACK_CONTEXT context;
     bool isGateway;
+    SHADOW_SUB_DEVICES *subDevices;
+    tickcounter_ms_t subDevicesPubTick;
 } IOT_SH_CLIENT;
 
 static bool StringCmp(const char* src, const char* des, size_t head, size_t end)
@@ -494,10 +497,11 @@ static void OnRecvCallbackForMethodReq(const IOT_SH_CLIENT_HANDLE handle, const 
 
 static void OnRecvCallbackForMethodResp(const IOT_SH_CLIENT_HANDLE handle, const char *topic,
                                         const SHADOW_MESSAGE_CONTEXT *msgContext, const JSON_Object *root,
-                                        const APP_PAYLOAD* payload)
+                                        const APP_PAYLOAD *payload)
 {
     char *message = malloc(payload->length + 1);
-    if (message != NULL) {
+    if (message != NULL)
+    {
         strncpy(message, payload->message, payload->length);
         message[payload->length] = '\0';
         LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method response:\n%s\n%s", topic, message);
@@ -507,14 +511,17 @@ static void OnRecvCallbackForMethodResp(const IOT_SH_CLIENT_HANDLE handle, const
     {
         LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method response:\n%s", topic);
     }
-    const char* methodName = json_object_get_string(root, KEY_METHOD_NAME);
+    const char *methodName = json_object_get_string(root, KEY_METHOD_NAME);
 
-    if (NULL == methodName) {
+    if (NULL == methodName)
+    {
         LogError("Failure: methodName should not be NULL");
-    } else {
+    }
+    else
+    {
         double status = json_object_get_number(root, KEY_STATUS);
-        JSON_Object* payload = json_object_get_object(root, KEY_PAYLOAD);
-        JSON_Array * payloadArray = json_object_get_array(root, KEY_PAYLOAD);
+        JSON_Object *payload = json_object_get_object(root, KEY_PAYLOAD);
+        JSON_Array *payloadArray = json_object_get_array(root, KEY_PAYLOAD);
         if (strcmp(methodName, METHOD_GET_FIRMWARE) == 0)
         {
             // Handle response for get firmware
@@ -568,23 +575,46 @@ static void OnRecvCallbackForMethodResp(const IOT_SH_CLIENT_HANDLE handle, const
         }
         else if (strcmp(methodName, METHOD_GET_SUB_DEVICES) == 0)
         {
-            if (status == 404)
+            if (status == 200)
             {
-                // no gateway device
-            }
-            else if (status == 200)
-            {
-                if (NULL != handle->callback.getSubDevices)
+                SHADOW_SUB_DEVICES *subDevices = malloc(sizeof(SHADOW_SUB_DEVICES *));
+                if (NULL == subDevices)
                 {
-                    SHADOW_SUB_DEVICES subDevices;
-                    size_t count = json_array_get_count(payloadArray);
-                    subDevices.count = count;
-                    subDevices.puids = malloc(sizeof(char*) * count);
-                    for (size_t i = 0; i < count; i++)
+                    LogError("Failure: failed to allocate memory for subDevices.");
+                    return;
+                }
+                size_t count = json_array_get_count(payloadArray);
+                subDevices->count = count;
+                subDevices->puids = malloc(sizeof(char *) * count);
+                if (NULL == subDevices->puids)
+                {
+                    LogError("Failure: failed to allocate memory for subDevice puids.");
+                    return;
+                }
+                for (size_t i = 0; i < count; i++)
+                {
+                    const char *puid = json_array_get_string(payloadArray, i);
+                    subDevices->puids[i] = malloc(sizeof(char *) * (strlen(puid) + 1));
+                    if (NULL == subDevices->puids[i])
                     {
-                        subDevices.puids[i] = json_array_get_string(payloadArray, i);
+                        LogError("Failure: failed to allocate memory for subDevice puid.");
+                        return;
                     }
-                    (*(handle->callback.getSubDevices))(msgContext, &subDevices, handle->context.getSubDevices);
+                    strcpy(subDevices->puids[i], puid);
+                }
+                if (NULL != handle->subDevices)
+                {
+                    free(handle->subDevices);
+                }
+                handle->subDevices = subDevices;
+            }
+            else
+            {
+                LogError("Unexpected response. %d", status);
+                if (handle->isGateway && NULL == handle->subDevices)
+                {
+                    LogError("gateway initialization fail, disconnect.");
+                    iothub_mqtt_disconnect(handle->mqttClient);
                 }
             }
         }
@@ -719,7 +749,18 @@ static void ResetIotDmClient(IOT_SH_CLIENT_HANDLE handle)
     if (NULL != handle)
     {
         handle->subscribed = false;
-        handle->subscribeSentTimestamp = 0;
+        handle->subscribeSentTick = 0;
+
+        if (NULL != handle->subDevices)
+        {
+            if (NULL != handle->subDevices->puids)
+            {
+                free(handle->subDevices->puids);
+            }
+            free(handle->subDevices);
+        }
+        handle->subDevices = NULL;
+        handle->subDevicesPubTick = 0;
 
         handle->endpoint = NULL;
         handle->name = NULL;
@@ -735,21 +776,41 @@ static void ResetIotDmClient(IOT_SH_CLIENT_HANDLE handle)
         handle->callback.otaJob = NULL;
         handle->callback.otaReportStart = NULL;
         handle->callback.otaReportResult = NULL;
-
-        handle->context.delta = NULL;
-        handle->context.getAccepted = NULL;
-        handle->context.getRejected = NULL;
-        handle->context.updateAccepted = NULL;
-        handle->context.updateRejected = NULL;
-        handle->context.updateSnapshot = NULL;
-        handle->context.updateDocuments = NULL;
-        handle->context.otaJob = NULL;
-        handle->context.otaReportStart = NULL;
-        handle->context.otaReportResult = NULL;
     }
 }
 
-static int SendRequest(const IOT_SH_CLIENT_HANDLE handle, char* topic, JSON_Value* request)
+bool checkSubDevice(const IOT_SH_CLIENT_HANDLE handle, char *topic)
+{
+    char *subDeviceP;
+    subDeviceP = strstr(topic, SUBDEVICE_TAG);
+    if (NULL == subDeviceP)
+    {
+        return true;
+    }
+    char subDeviceId[32];
+    int result = sscanf(subDeviceP + strlen(SUBDEVICE_TAG), "%[^/]", subDeviceId);
+    if (result == 0)
+    {
+        LogError("Failure: subdeviceId shoud not be NULL.");
+        return false;
+    }
+    if (NULL == handle || NULL == handle->subDevices)
+    {
+        LogError("Failure: handle or handle.subDevices is NULL.");
+        return false;
+    }
+    for (int i = 0; i < handle->subDevices->count; i++)
+    {
+        if (strcmp(handle->subDevices->puids[i], subDeviceId) == 0)
+        {
+            return true;
+        }
+    }
+    LogError("Failure: subdevice %s is not allowed to access via current gateway.", subDeviceId);
+    return false;
+}
+
+static int SendRequest(const IOT_SH_CLIENT_HANDLE handle, char *topic, JSON_Value *request)
 {
     int result = 0;
     if (NULL == handle || NULL == topic || NULL == request)
@@ -759,21 +820,29 @@ static int SendRequest(const IOT_SH_CLIENT_HANDLE handle, char* topic, JSON_Valu
     }
     else
     {
-        char* encoded = json_serialize_to_string(request);
-        if (NULL == encoded)
+        if (!checkSubDevice(handle, topic))
         {
-            LogError("Failue: failed to encode the json.");
+            LogError("Failure: subDevice check fail.");
             result = __FAILURE__;
-        }
-        else
+        }else
         {
-            LOG(AZ_LOG_TRACE, LOG_LINE, "Sending request:\n%s\n%s", topic, encoded);
-            result = publish_mqtt_message(handle->mqttClient, topic, DELIVER_AT_LEAST_ONCE, (uint8_t*)encoded, strlen(encoded), NULL, NULL);
-            if (result != 0)
+            char *encoded = json_serialize_to_string(request);
+            if (NULL == encoded)
             {
-                LogError("Failed to publish method message");
+                LogError("Failue: failed to encode the json.");
+                result = __FAILURE__;
             }
-            json_free_serialized_string(encoded);
+            else
+            {
+                LOG(AZ_LOG_TRACE, LOG_LINE, "Sending request:\n%s\n%s", topic, encoded);
+                result = publish_mqtt_message(handle->mqttClient, topic, DELIVER_AT_LEAST_ONCE, (uint8_t *) encoded,
+                                              strlen(encoded), NULL, NULL);
+                if (result != 0)
+                {
+                    LogError("Failed to publish method message");
+                }
+                json_free_serialized_string(encoded);
+            }
         }
     }
 
@@ -943,6 +1012,11 @@ void iot_smarthome_client_deinit(IOT_SH_CLIENT_HANDLE handle)
             ReleaseSubscription(topics, topicSize);
         }
 
+        if (NULL != handle->tickCounter)
+        {
+            tickcounter_destroy(handle->tickCounter);
+        }
+
         iothub_mqtt_destroy(handle->mqttClient);
 
         ResetIotDmClient(handle);
@@ -950,8 +1024,8 @@ void iot_smarthome_client_deinit(IOT_SH_CLIENT_HANDLE handle)
     }
 }
 
-int iot_smarthome_client_connect(IOT_SH_CLIENT_HANDLE handle, const char* username, const char* deviceId,
-                                 const char* client_cert, const char* client_key)
+int iot_smarthome_client_connect(IOT_SH_CLIENT_HANDLE handle, const char *username, const char *deviceId,
+                                 const char *client_cert, const char *client_key)
 {
     IOT_SH_CLIENT_OPTIONS options;
     options.cleanSession = true;
@@ -968,7 +1042,7 @@ int iot_smarthome_client_connect(IOT_SH_CLIENT_HANDLE handle, const char* userna
         LogError("IOT_SH_CLIENT_HANDLE handle should not be NULL.");
         return __FAILURE__;
     }
-    if ( NULL == options.username || NULL == options.client_cert || NULL == options.client_key )
+    if (NULL == options.username || NULL == options.client_cert || NULL == options.client_key)
     {
         LogError("Failure: the username, cert, cert_key in options should not be NULL.");
         return __FAILURE__;
@@ -984,13 +1058,25 @@ int iot_smarthome_client_connect(IOT_SH_CLIENT_HANDLE handle, const char* userna
     }
 
     handle->mqttClient->callbackContext = handle;
-    do
-    {
-        iothub_mqtt_dowork(handle->mqttClient);
-    } while (MQTT_CLIENT_STATUS_CONNECTED != handle->mqttClient->mqttClientStatus && handle->mqttClient->isRecoverableError);
 
     handle->mqttClient->isDestroyCalled = false;
     handle->mqttClient->isDisconnectCalled = false;
+    handle->tickCounter = tickcounter_create();
+
+    //建立mqtt连接，订阅主题，网关设备获取子设备列表
+    tickcounter_ms_t start, current;
+    tickcounter_get_current_ms(handle->tickCounter, &start);
+    do
+    {
+        tickcounter_get_current_ms(handle->tickCounter, &current);
+        if ((current - start) / 1000 > 300 || iot_smarthome_client_dowork(handle) < 0 ||
+            MQTT_CLIENT_STATUS_CONNECTED != handle->mqttClient->mqttClientStatus &&
+            !handle->mqttClient->isRecoverableError)
+        {
+            return -1;
+        }
+        ThreadAPI_Sleep(1000);
+    } while (!handle->isGateway && !handle->subscribed || handle->isGateway && NULL == handle->subDevices);
 
     return 0;
 }
@@ -1021,38 +1107,70 @@ int iot_smarthome_client_dowork(const IOT_SH_CLIENT_HANDLE handle)
     if (handle->mqttClient->isConnectionLost)
     {
         handle->subscribed = false;
-        handle->subscribeSentTimestamp = 0;
+        handle->subscribeSentTick = 0;
     }
-    if (handle->mqttClient->mqttClientStatus == MQTT_CLIENT_STATUS_CONNECTED && !(handle->subscribed))
+    if (handle->mqttClient->mqttClientStatus == MQTT_CLIENT_STATUS_CONNECTED)
     {
-        time_t current = time(NULL);
-        double elipsed = difftime(current, handle->subscribeSentTimestamp);
-        if (elipsed > 10) {
-            size_t topicSize = handle->isGateway == true ? SUB_TOPIC_SIZE * 2 : SUB_TOPIC_SIZE;
-            char **topics =  (char **)malloc(sizeof(char *) * topicSize);
-            int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, 0, handle->name);
-            if (handle->isGateway == true) {
-                char *subObject = GenerateTopic(SUB_GATEWAY_WILDCARD, handle->name);
-                amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, amount, subObject);
-                free(subObject);
-            }
-            if (amount < 0) {
-                LogError("Failure: failed to get the subscribing topics.");
-                return __FAILURE__;
-            } else if (amount > 0) {
-                SUBSCRIBE_PAYLOAD * subscribe = malloc(sizeof(SUBSCRIBE_PAYLOAD) * topicSize);
-                for (size_t index = 0; index < (size_t) amount; ++index) {
-                    subscribe[index].subscribeTopic = topics[index];
-                    subscribe[index].qosReturn = DELIVER_AT_LEAST_ONCE;
-                }
-                int result = subscribe_mqtt_topics(handle->mqttClient, subscribe, amount, OnSubAckCallback, handle);
-                free(subscribe);
-                ReleaseSubscription(topics, amount);
-                if (0 != result) {
-                    LogError("Failure: failed to subscribe the topics.");
+        tickcounter_ms_t current;
+        if (!(handle->subscribed))
+        {
+            tickcounter_get_current_ms(handle->tickCounter, &current);
+            double elipsed = (current - handle->subscribeSentTick) / 1000;
+            if (elipsed > 10)
+            {
+                size_t topicSize = handle->isGateway == true ? SUB_TOPIC_SIZE * 2 : SUB_TOPIC_SIZE;
+                char **topics = (char **) malloc(sizeof(char *) * topicSize);
+                if (NULL == topics)
+                {
+                    LogError("Failure: failed to allocate memory for topics.");
                     return __FAILURE__;
                 }
-                handle->subscribeSentTimestamp = time(NULL);
+                int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, 0, handle->name);
+                if (handle->isGateway == true)
+                {
+                    char *subObject = GenerateTopic(SUB_GATEWAY_WILDCARD, handle->name);
+                    amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, amount, subObject);
+                    free(subObject);
+                }
+                if (amount < 0)
+                {
+                    LogError("Failure: failed to get the subscribing topics.");
+                    return __FAILURE__;
+                }
+                else if (amount > 0)
+                {
+                    SUBSCRIBE_PAYLOAD *subscribe = malloc(sizeof(SUBSCRIBE_PAYLOAD) * topicSize);
+                    if (NULL == subscribe)
+                    {
+                        LogError("Failure: failed to allocate memory for subscribe.");
+                        return __FAILURE__;
+                    }
+                    for (size_t index = 0; index < (size_t) amount; ++index)
+                    {
+                        subscribe[index].subscribeTopic = topics[index];
+                        subscribe[index].qosReturn = DELIVER_AT_LEAST_ONCE;
+                    }
+                    int result = subscribe_mqtt_topics(handle->mqttClient, subscribe, amount, OnSubAckCallback, handle);
+                    free(subscribe);
+                    ReleaseSubscription(topics, amount);
+                    if (0 != result)
+                    {
+                        LogError("Failure: failed to subscribe the topics.");
+                        return __FAILURE__;
+                    }
+                    tickcounter_get_current_ms(handle->tickCounter, &handle->subscribeSentTick);
+                }
+            }
+        }
+
+        if (handle->isGateway && handle->subscribed && NULL == handle->subDevices)
+        {
+            tickcounter_get_current_ms(handle->tickCounter, &current);
+            double elapsed = (current - handle->subDevicesPubTick) / 1000;
+            if (elapsed > 10)
+            {
+                iot_smarthome_client_get_sub_devices(handle, handle->name, "gateway_init_request");
+                tickcounter_get_current_ms(handle->tickCounter, &handle->subDevicesPubTick);
             }
         }
     }
@@ -1177,13 +1295,6 @@ int iot_smarthome_client_update_subdevice_shadow_with_binary(const IOT_SH_CLIENT
     int result = iot_smarthome_client_update_shadow_with_binary(handle, pubObject, requestId, version, reported, lastUpdatedTime);
     free(pubObject);
     return result;
-}
-
-void iot_smarthome_client_register_get_sub_devices(const IOT_SH_CLIENT_HANDLE handle, SHADOW_GET_SUB_DEVICES_CALLBACK callback,
-                                                   void *callbackContext)
-{
-    handle->callback.getSubDevices = callback;
-    handle->context.getSubDevices = callbackContext;
 }
 
 int iot_smarthome_client_get_sub_devices(const IOT_SH_CLIENT_HANDLE handle, const char *device, const char *requestId)

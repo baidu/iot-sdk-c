@@ -52,7 +52,13 @@ typedef struct IOT_SH_CLIENT_OPTIONS_TAG
     char* client_cert;
     char* client_key;
 
-} IOT_SH_CLIENT_OPTIONS; 
+} IOT_SH_CLIENT_OPTIONS;
+
+typedef struct SHADOW_SUB_DEVICES_TAG
+{
+    char **puids;
+    size_t  count;
+} SHADOW_SUB_DEVICES;
 
 MOCKABLE_FUNCTION(, IOT_SH_CLIENT_HANDLE, iot_smarthome_client_init, bool, isGatewayDevice);
 MOCKABLE_FUNCTION(, void, iot_smarthome_client_deinit, IOT_SH_CLIENT_HANDLE, handle);
@@ -74,7 +80,6 @@ MOCKABLE_FUNCTION(, int, iot_smarthome_client_update_shadow, const IOT_SH_CLIENT
 MOCKABLE_FUNCTION(, int, iot_smarthome_client_update_desired_with_binary, const IOT_SH_CLIENT_HANDLE, handle, const char*, device, const char*, requestId, uint32_t, version, const char*, desired, const char*, lastUpdatedTime);
 MOCKABLE_FUNCTION(, int, iot_smarthome_client_update_shadow_with_binary, const IOT_SH_CLIENT_HANDLE, handle, const char*, device, const char*, requestId, uint32_t, version, const char*, reported, const char*, lastUpdatedTime);
 
-MOCKABLE_FUNCTION(, void, iot_smarthome_client_register_get_sub_devices, const IOT_SH_CLIENT_HANDLE, handle, SHADOW_GET_SUB_DEVICES_CALLBACK, callback, void*, callbackContext);
 MOCKABLE_FUNCTION(, int, iot_smarthome_client_get_sub_devices, const IOT_SH_CLIENT_HANDLE, handle, const char*, device, const char*, requestId);
 
 // Pub actions for gateway on behalf on subdevices
