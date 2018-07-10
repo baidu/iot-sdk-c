@@ -7,4 +7,3 @@
 [submodule "umqtt"]
 	path = umqtt
 	url = https://github.com/jewelzhu/azure-umqtt-c.git
-	branch = release_2017_09_08
