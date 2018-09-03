@@ -1,0 +1,1511 @@
+diff -uNr library_raw/aes.c library/aes.c
+--- library_raw/aes.c	2018-09-03 05:17:31.000000000 +0800
++++ library/aes.c	2018-09-03 01:37:00.000000000 +0800
+@@ -33,6 +33,7 @@
+ 
+ #if defined(MBEDTLS_AES_C)
+ 
++#include "c_types.h"
+ #include <string.h>
+ 
+ #include "mbedtls/aes.h"
+@@ -91,7 +92,7 @@
+ /*
+  * Forward S-box
+  */
+-static const unsigned char FSb[256] =
++static const unsigned char FSb[256] ICACHE_RODATA_ATTR STORE_ATTR =
+ {
+     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5,
+     0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
+@@ -198,19 +199,19 @@
+     V(CB,B0,B0,7B), V(FC,54,54,A8), V(D6,BB,BB,6D), V(3A,16,16,2C)
+ 
+ #define V(a,b,c,d) 0x##a##b##c##d
+-static const uint32_t FT0[256] = { FT };
++static const uint32_t FT0[256] ICACHE_RODATA_ATTR STORE_ATTR = { FT };
+ #undef V
+ 
+ #define V(a,b,c,d) 0x##b##c##d##a
+-static const uint32_t FT1[256] = { FT };
++static const uint32_t FT1[256] ICACHE_RODATA_ATTR STORE_ATTR = { FT };
+ #undef V
+ 
+ #define V(a,b,c,d) 0x##c##d##a##b
+-static const uint32_t FT2[256] = { FT };
++static const uint32_t FT2[256] ICACHE_RODATA_ATTR STORE_ATTR = { FT };
+ #undef V
+ 
+ #define V(a,b,c,d) 0x##d##a##b##c
+-static const uint32_t FT3[256] = { FT };
++static const uint32_t FT3[256] ICACHE_RODATA_ATTR STORE_ATTR = { FT };
+ #undef V
+ 
+ #undef FT
+@@ -218,7 +219,7 @@
+ /*
+  * Reverse S-box
+  */
+-static const unsigned char RSb[256] =
++static const unsigned char RSb[256] ICACHE_RODATA_ATTR STORE_ATTR =
+ {
+     0x52, 0x09, 0x6A, 0xD5, 0x30, 0x36, 0xA5, 0x38,
+     0xBF, 0x40, 0xA3, 0x9E, 0x81, 0xF3, 0xD7, 0xFB,
+@@ -325,19 +326,19 @@
+     V(61,84,CB,7B), V(70,B6,32,D5), V(74,5C,6C,48), V(42,57,B8,D0)
+ 
+ #define V(a,b,c,d) 0x##a##b##c##d
+-static const uint32_t RT0[256] = { RT };
++static const uint32_t RT0[256] ICACHE_RODATA_ATTR STORE_ATTR = { RT };
+ #undef V
+ 
+ #define V(a,b,c,d) 0x##b##c##d##a
+-static const uint32_t RT1[256] = { RT };
++static const uint32_t RT1[256] ICACHE_RODATA_ATTR STORE_ATTR = { RT };
+ #undef V
+ 
+ #define V(a,b,c,d) 0x##c##d##a##b
+-static const uint32_t RT2[256] = { RT };
++static const uint32_t RT2[256] ICACHE_RODATA_ATTR STORE_ATTR = { RT };
+ #undef V
+ 
+ #define V(a,b,c,d) 0x##d##a##b##c
+-static const uint32_t RT3[256] = { RT };
++static const uint32_t RT3[256] ICACHE_RODATA_ATTR STORE_ATTR = { RT };
+ #undef V
+ 
+ #undef RT
+@@ -345,7 +346,7 @@
+ /*
+  * Round constants
+  */
+-static const uint32_t RCON[10] =
++static const uint32_t RCON[10] ICACHE_RODATA_ATTR =
+ {
+     0x00000001, 0x00000002, 0x00000004, 0x00000008,
+     0x00000010, 0x00000020, 0x00000040, 0x00000080,
+@@ -531,10 +532,10 @@
+             for( i = 0; i < 10; i++, RK += 4 )
+             {
+                 RK[4]  = RK[0] ^ RCON[i] ^
+-                ( (uint32_t) FSb[ ( RK[3] >>  8 ) & 0xFF ]       ) ^
+-                ( (uint32_t) FSb[ ( RK[3] >> 16 ) & 0xFF ] <<  8 ) ^
+-                ( (uint32_t) FSb[ ( RK[3] >> 24 ) & 0xFF ] << 16 ) ^
+-                ( (uint32_t) FSb[ ( RK[3]       ) & 0xFF ] << 24 );
++                ( (uint32_t) system_get_data_of_array_8(FSb ,( RK[3] >>  8 ) & 0xFF )       ) ^
++                ( (uint32_t) system_get_data_of_array_8(FSb ,( RK[3] >> 16 ) & 0xFF ) <<  8 ) ^
++                ( (uint32_t) system_get_data_of_array_8(FSb ,( RK[3] >> 24 ) & 0xFF ) << 16 ) ^
++                ( (uint32_t) system_get_data_of_array_8(FSb ,( RK[3]       ) & 0xFF ) << 24 );
+ 
+                 RK[5]  = RK[1] ^ RK[4];
+                 RK[6]  = RK[2] ^ RK[5];
+@@ -547,10 +548,10 @@
+             for( i = 0; i < 8; i++, RK += 6 )
+             {
+                 RK[6]  = RK[0] ^ RCON[i] ^
+-                ( (uint32_t) FSb[ ( RK[5] >>  8 ) & 0xFF ]       ) ^
+-                ( (uint32_t) FSb[ ( RK[5] >> 16 ) & 0xFF ] <<  8 ) ^
+-                ( (uint32_t) FSb[ ( RK[5] >> 24 ) & 0xFF ] << 16 ) ^
+-                ( (uint32_t) FSb[ ( RK[5]       ) & 0xFF ] << 24 );
++                ( (uint32_t) system_get_data_of_array_8(FSb, ( RK[5] >>  8 ) & 0xFF )       ) ^
++                ( (uint32_t) system_get_data_of_array_8(FSb, ( RK[5] >> 16 ) & 0xFF ) <<  8 ) ^
++                ( (uint32_t) system_get_data_of_array_8(FSb, ( RK[5] >> 24 ) & 0xFF ) << 16 ) ^
++                ( (uint32_t) system_get_data_of_array_8(FSb, ( RK[5]       ) & 0xFF ) << 24 );
+ 
+                 RK[7]  = RK[1] ^ RK[6];
+                 RK[8]  = RK[2] ^ RK[7];
+@@ -565,20 +566,20 @@
+             for( i = 0; i < 7; i++, RK += 8 )
+             {
+                 RK[8]  = RK[0] ^ RCON[i] ^
+-                ( (uint32_t) FSb[ ( RK[7] >>  8 ) & 0xFF ]       ) ^
+-                ( (uint32_t) FSb[ ( RK[7] >> 16 ) & 0xFF ] <<  8 ) ^
+-                ( (uint32_t) FSb[ ( RK[7] >> 24 ) & 0xFF ] << 16 ) ^
+-                ( (uint32_t) FSb[ ( RK[7]       ) & 0xFF ] << 24 );
++                ( (uint32_t) system_get_data_of_array_8(FSb, ( RK[7] >>  8 ) & 0xFF )       ) ^
++                ( (uint32_t) system_get_data_of_array_8(FSb, ( RK[7] >> 16 ) & 0xFF ) <<  8 ) ^
++                ( (uint32_t) system_get_data_of_array_8(FSb, ( RK[7] >> 24 ) & 0xFF ) << 16 ) ^
++                ( (uint32_t) system_get_data_of_array_8(FSb, ( RK[7]       ) & 0xFF ) << 24 );
+ 
+                 RK[9]  = RK[1] ^ RK[8];
+                 RK[10] = RK[2] ^ RK[9];
+                 RK[11] = RK[3] ^ RK[10];
+ 
+                 RK[12] = RK[4] ^
+-                ( (uint32_t) FSb[ ( RK[11]       ) & 0xFF ]       ) ^
+-                ( (uint32_t) FSb[ ( RK[11] >>  8 ) & 0xFF ] <<  8 ) ^
+-                ( (uint32_t) FSb[ ( RK[11] >> 16 ) & 0xFF ] << 16 ) ^
+-                ( (uint32_t) FSb[ ( RK[11] >> 24 ) & 0xFF ] << 24 );
++                ( (uint32_t) system_get_data_of_array_8(FSb, ( RK[11]       ) & 0xFF )       ) ^
++                ( (uint32_t) system_get_data_of_array_8(FSb, ( RK[11] >>  8 ) & 0xFF ) <<  8 ) ^
++                ( (uint32_t) system_get_data_of_array_8(FSb, ( RK[11] >> 16 ) & 0xFF ) << 16 ) ^
++                ( (uint32_t) system_get_data_of_array_8(FSb, ( RK[11] >> 24 ) & 0xFF ) << 24 );
+ 
+                 RK[13] = RK[5] ^ RK[12];
+                 RK[14] = RK[6] ^ RK[13];
+@@ -641,10 +642,10 @@
+     {
+         for( j = 0; j < 4; j++, SK++ )
+         {
+-            *RK++ = RT0[ FSb[ ( *SK       ) & 0xFF ] ] ^
+-                    RT1[ FSb[ ( *SK >>  8 ) & 0xFF ] ] ^
+-                    RT2[ FSb[ ( *SK >> 16 ) & 0xFF ] ] ^
+-                    RT3[ FSb[ ( *SK >> 24 ) & 0xFF ] ];
++            *RK++ = RT0[ system_get_data_of_array_8(FSb, ( *SK       ) & 0xFF ) ] ^
++                    RT1[ system_get_data_of_array_8(FSb, ( *SK >>  8 ) & 0xFF ) ] ^
++                    RT2[ system_get_data_of_array_8(FSb, ( *SK >> 16 ) & 0xFF ) ] ^
++                    RT3[ system_get_data_of_array_8(FSb, ( *SK >> 24 ) & 0xFF ) ];
+         }
+     }
+ 
+@@ -733,28 +734,28 @@
+     AES_FROUND( Y0, Y1, Y2, Y3, X0, X1, X2, X3 );
+ 
+     X0 = *RK++ ^ \
+-            ( (uint32_t) FSb[ ( Y0       ) & 0xFF ]       ) ^
+-            ( (uint32_t) FSb[ ( Y1 >>  8 ) & 0xFF ] <<  8 ) ^
+-            ( (uint32_t) FSb[ ( Y2 >> 16 ) & 0xFF ] << 16 ) ^
+-            ( (uint32_t) FSb[ ( Y3 >> 24 ) & 0xFF ] << 24 );
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y0       ) & 0xFF )       ) ^
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y1 >>  8 ) & 0xFF ) <<  8 ) ^
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y2 >> 16 ) & 0xFF ) << 16 ) ^
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y3 >> 24 ) & 0xFF ) << 24 );
+ 
+     X1 = *RK++ ^ \
+-            ( (uint32_t) FSb[ ( Y1       ) & 0xFF ]       ) ^
+-            ( (uint32_t) FSb[ ( Y2 >>  8 ) & 0xFF ] <<  8 ) ^
+-            ( (uint32_t) FSb[ ( Y3 >> 16 ) & 0xFF ] << 16 ) ^
+-            ( (uint32_t) FSb[ ( Y0 >> 24 ) & 0xFF ] << 24 );
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y1       ) & 0xFF )       ) ^
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y2 >>  8 ) & 0xFF ) <<  8 ) ^
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y3 >> 16 ) & 0xFF ) << 16 ) ^
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y0 >> 24 ) & 0xFF ) << 24 );
+ 
+     X2 = *RK++ ^ \
+-            ( (uint32_t) FSb[ ( Y2       ) & 0xFF ]       ) ^
+-            ( (uint32_t) FSb[ ( Y3 >>  8 ) & 0xFF ] <<  8 ) ^
+-            ( (uint32_t) FSb[ ( Y0 >> 16 ) & 0xFF ] << 16 ) ^
+-            ( (uint32_t) FSb[ ( Y1 >> 24 ) & 0xFF ] << 24 );
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y2       ) & 0xFF )       ) ^
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y3 >>  8 ) & 0xFF ) <<  8 ) ^
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y0 >> 16 ) & 0xFF ) << 16 ) ^
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y1 >> 24 ) & 0xFF ) << 24 );
+ 
+     X3 = *RK++ ^ \
+-            ( (uint32_t) FSb[ ( Y3       ) & 0xFF ]       ) ^
+-            ( (uint32_t) FSb[ ( Y0 >>  8 ) & 0xFF ] <<  8 ) ^
+-            ( (uint32_t) FSb[ ( Y1 >> 16 ) & 0xFF ] << 16 ) ^
+-            ( (uint32_t) FSb[ ( Y2 >> 24 ) & 0xFF ] << 24 );
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y3       ) & 0xFF )       ) ^
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y0 >>  8 ) & 0xFF ) <<  8 ) ^
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y1 >> 16 ) & 0xFF ) << 16 ) ^
++            ( (uint32_t) system_get_data_of_array_8(FSb, ( Y2 >> 24 ) & 0xFF ) << 24 );
+ 
+     PUT_UINT32_LE( X0, output,  0 );
+     PUT_UINT32_LE( X1, output,  4 );
+@@ -790,28 +791,28 @@
+     AES_RROUND( Y0, Y1, Y2, Y3, X0, X1, X2, X3 );
+ 
+     X0 = *RK++ ^ \
+-            ( (uint32_t) RSb[ ( Y0       ) & 0xFF ]       ) ^
+-            ( (uint32_t) RSb[ ( Y3 >>  8 ) & 0xFF ] <<  8 ) ^
+-            ( (uint32_t) RSb[ ( Y2 >> 16 ) & 0xFF ] << 16 ) ^
+-            ( (uint32_t) RSb[ ( Y1 >> 24 ) & 0xFF ] << 24 );
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y0       ) & 0xFF )       ) ^
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y3 >>  8 ) & 0xFF ) <<  8 ) ^
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y2 >> 16 ) & 0xFF ) << 16 ) ^
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y1 >> 24 ) & 0xFF ) << 24 );
+ 
+     X1 = *RK++ ^ \
+-            ( (uint32_t) RSb[ ( Y1       ) & 0xFF ]       ) ^
+-            ( (uint32_t) RSb[ ( Y0 >>  8 ) & 0xFF ] <<  8 ) ^
+-            ( (uint32_t) RSb[ ( Y3 >> 16 ) & 0xFF ] << 16 ) ^
+-            ( (uint32_t) RSb[ ( Y2 >> 24 ) & 0xFF ] << 24 );
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y1       ) & 0xFF )       ) ^
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y0 >>  8 ) & 0xFF ) <<  8 ) ^
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y3 >> 16 ) & 0xFF ) << 16 ) ^
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y2 >> 24 ) & 0xFF ) << 24 );
+ 
+     X2 = *RK++ ^ \
+-            ( (uint32_t) RSb[ ( Y2       ) & 0xFF ]       ) ^
+-            ( (uint32_t) RSb[ ( Y1 >>  8 ) & 0xFF ] <<  8 ) ^
+-            ( (uint32_t) RSb[ ( Y0 >> 16 ) & 0xFF ] << 16 ) ^
+-            ( (uint32_t) RSb[ ( Y3 >> 24 ) & 0xFF ] << 24 );
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y2       ) & 0xFF )       ) ^
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y1 >>  8 ) & 0xFF ) <<  8 ) ^
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y0 >> 16 ) & 0xFF ) << 16 ) ^
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y3 >> 24 ) & 0xFF ) << 24 );
+ 
+     X3 = *RK++ ^ \
+-            ( (uint32_t) RSb[ ( Y3       ) & 0xFF ]       ) ^
+-            ( (uint32_t) RSb[ ( Y2 >>  8 ) & 0xFF ] <<  8 ) ^
+-            ( (uint32_t) RSb[ ( Y1 >> 16 ) & 0xFF ] << 16 ) ^
+-            ( (uint32_t) RSb[ ( Y0 >> 24 ) & 0xFF ] << 24 );
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y3       ) & 0xFF )       ) ^
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y2 >>  8 ) & 0xFF ) <<  8 ) ^
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y1 >> 16 ) & 0xFF ) << 16 ) ^
++            ( (uint32_t) system_get_data_of_array_8(RSb, ( Y0 >> 24 ) & 0xFF ) << 24 );
+ 
+     PUT_UINT32_LE( X0, output,  0 );
+     PUT_UINT32_LE( X1, output,  4 );
+diff -uNr library_raw/base64.c library/base64.c
+--- library_raw/base64.c	2018-09-03 05:17:31.000000000 +0800
++++ library/base64.c	2018-09-03 01:37:24.000000000 +0800
+@@ -26,7 +26,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_BASE64_C)
+-
++#include "c_types.h"
+ #include "mbedtls/base64.h"
+ 
+ #include <stdint.h>
+@@ -41,7 +41,7 @@
+ #endif /* MBEDTLS_PLATFORM_C */
+ #endif /* MBEDTLS_SELF_TEST */
+ 
+-static const unsigned char base64_enc_map[64] =
++static const unsigned char base64_enc_map[64] ICACHE_RODATA_ATTR =
+ {
+     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+     'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+@@ -52,7 +52,7 @@
+     '8', '9', '+', '/'
+ };
+ 
+-static const unsigned char base64_dec_map[128] =
++static const unsigned char base64_dec_map[128] ICACHE_RODATA_ATTR =
+ {
+     127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
+     127, 127, 127, 127, 127, 127, 127, 127, 127, 127,
+@@ -111,10 +111,10 @@
+         C2 = *src++;
+         C3 = *src++;
+ 
+-        *p++ = base64_enc_map[(C1 >> 2) & 0x3F];
+-        *p++ = base64_enc_map[(((C1 &  3) << 4) + (C2 >> 4)) & 0x3F];
+-        *p++ = base64_enc_map[(((C2 & 15) << 2) + (C3 >> 6)) & 0x3F];
+-        *p++ = base64_enc_map[C3 & 0x3F];
++        *p++ = system_get_data_of_array_8(base64_enc_map, (C1 >> 2) & 0x3F);
++        *p++ = system_get_data_of_array_8(base64_enc_map, (((C1 &  3) << 4) + (C2 >> 4)) & 0x3F);
++        *p++ = system_get_data_of_array_8(base64_enc_map, (((C2 & 15) << 2) + (C3 >> 6)) & 0x3F);
++        *p++ = system_get_data_of_array_8(base64_enc_map, C3 & 0x3F);
+     }
+ 
+     if( i < slen )
+@@ -122,11 +122,11 @@
+         C1 = *src++;
+         C2 = ( ( i + 1 ) < slen ) ? *src++ : 0;
+ 
+-        *p++ = base64_enc_map[(C1 >> 2) & 0x3F];
+-        *p++ = base64_enc_map[(((C1 & 3) << 4) + (C2 >> 4)) & 0x3F];
++        *p++ = system_get_data_of_array_8(base64_enc_map, (C1 >> 2) & 0x3F);
++        *p++ = system_get_data_of_array_8(base64_enc_map, (((C1 & 3) << 4) + (C2 >> 4)) & 0x3F);
+ 
+         if( ( i + 1 ) < slen )
+-             *p++ = base64_enc_map[((C2 & 15) << 2) & 0x3F];
++             *p++ = system_get_data_of_array_8(base64_enc_map, ((C2 & 15) << 2) & 0x3F);
+         else *p++ = '=';
+ 
+         *p++ = '=';
+@@ -177,10 +177,10 @@
+         if( src[i] == '=' && ++j > 2 )
+             return( MBEDTLS_ERR_BASE64_INVALID_CHARACTER );
+ 
+-        if( src[i] > 127 || base64_dec_map[src[i]] == 127 )
++        if( src[i] > 127 || system_get_data_of_array_8(base64_dec_map, src[i]) == 127 )
+             return( MBEDTLS_ERR_BASE64_INVALID_CHARACTER );
+ 
+-        if( base64_dec_map[src[i]] < 64 && j != 0 )
++        if( system_get_data_of_array_8(base64_dec_map, src[i]) < 64 && j != 0 )
+             return( MBEDTLS_ERR_BASE64_INVALID_CHARACTER );
+ 
+         n++;
+@@ -206,8 +206,8 @@
+         if( *src == '\r' || *src == '\n' || *src == ' ' )
+             continue;
+ 
+-        j -= ( base64_dec_map[*src] == 64 );
+-        x  = ( x << 6 ) | ( base64_dec_map[*src] & 0x3F );
++        j -= ( system_get_data_of_array_8(base64_dec_map, *src) == 64 );
++        x  = ( x << 6 ) | ( system_get_data_of_array_8(base64_dec_map, *src) & 0x3F );
+ 
+         if( ++n == 4 )
+         {
+diff -uNr library_raw/bignum.c library/bignum.c
+--- library_raw/bignum.c	2018-09-03 05:17:31.000000000 +0800
++++ library/bignum.c	2018-09-03 01:21:46.000000000 +0800
+@@ -42,7 +42,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_BIGNUM_C)
+-
++#include "c_types.h"
+ #include "mbedtls/bignum.h"
+ #include "mbedtls/bn_mul.h"
+ 
+@@ -1968,7 +1968,7 @@
+ 
+ #if defined(MBEDTLS_GENPRIME)
+ 
+-static const int small_prime[] =
++static const int small_prime[] ICACHE_RODATA_ATTR STORE_ATTR =
+ {
+         3,    5,    7,   11,   13,   17,   19,   23,
+        29,   31,   37,   41,   43,   47,   53,   59,
+diff -uNr library_raw/certs.c library/certs.c
+--- library_raw/certs.c	2018-09-03 05:17:31.000000000 +0800
++++ library/certs.c	2018-09-03 01:48:01.000000000 +0800
+@@ -27,6 +27,8 @@
+ 
+ #include "mbedtls/certs.h"
+ 
++#if defined(MBEDTLS_SELF_TEST)
++
+ #if defined(MBEDTLS_CERTS_C)
+ 
+ #if defined(MBEDTLS_ECDSA_C)
+@@ -349,3 +351,7 @@
+ #endif /* MBEDTLS_RSA_C */
+ 
+ #endif /* MBEDTLS_CERTS_C */
++
++#else
++
++#endif
+diff -uNr library_raw/cipher_wrap.c library/cipher_wrap.c
+--- library_raw/cipher_wrap.c	2018-09-03 05:17:31.000000000 +0800
++++ library/cipher_wrap.c	2018-09-03 01:21:46.000000000 +0800
+@@ -30,7 +30,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_CIPHER_C)
+-
++#include "c_types.h"
+ #include "mbedtls/cipher_internal.h"
+ 
+ #if defined(MBEDTLS_AES_C)
+@@ -178,7 +178,7 @@
+     mbedtls_free( ctx );
+ }
+ 
+-static const mbedtls_cipher_base_t aes_info = {
++static const mbedtls_cipher_base_t aes_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ID_AES,
+     aes_crypt_ecb_wrap,
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+@@ -199,7 +199,7 @@
+     aes_ctx_free
+ };
+ 
+-static const mbedtls_cipher_info_t aes_128_ecb_info = {
++static const mbedtls_cipher_info_t aes_128_ecb_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_128_ECB,
+     MBEDTLS_MODE_ECB,
+     128,
+@@ -210,7 +210,7 @@
+     &aes_info
+ };
+ 
+-static const mbedtls_cipher_info_t aes_192_ecb_info = {
++static const mbedtls_cipher_info_t aes_192_ecb_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_192_ECB,
+     MBEDTLS_MODE_ECB,
+     192,
+@@ -221,7 +221,7 @@
+     &aes_info
+ };
+ 
+-static const mbedtls_cipher_info_t aes_256_ecb_info = {
++static const mbedtls_cipher_info_t aes_256_ecb_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_256_ECB,
+     MBEDTLS_MODE_ECB,
+     256,
+@@ -233,7 +233,7 @@
+ };
+ 
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+-static const mbedtls_cipher_info_t aes_128_cbc_info = {
++static const mbedtls_cipher_info_t aes_128_cbc_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_128_CBC,
+     MBEDTLS_MODE_CBC,
+     128,
+@@ -244,7 +244,7 @@
+     &aes_info
+ };
+ 
+-static const mbedtls_cipher_info_t aes_192_cbc_info = {
++static const mbedtls_cipher_info_t aes_192_cbc_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_192_CBC,
+     MBEDTLS_MODE_CBC,
+     192,
+@@ -255,7 +255,7 @@
+     &aes_info
+ };
+ 
+-static const mbedtls_cipher_info_t aes_256_cbc_info = {
++static const mbedtls_cipher_info_t aes_256_cbc_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_256_CBC,
+     MBEDTLS_MODE_CBC,
+     256,
+@@ -268,7 +268,7 @@
+ #endif /* MBEDTLS_CIPHER_MODE_CBC */
+ 
+ #if defined(MBEDTLS_CIPHER_MODE_CFB)
+-static const mbedtls_cipher_info_t aes_128_cfb128_info = {
++static const mbedtls_cipher_info_t aes_128_cfb128_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_128_CFB128,
+     MBEDTLS_MODE_CFB,
+     128,
+@@ -279,7 +279,7 @@
+     &aes_info
+ };
+ 
+-static const mbedtls_cipher_info_t aes_192_cfb128_info = {
++static const mbedtls_cipher_info_t aes_192_cfb128_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_192_CFB128,
+     MBEDTLS_MODE_CFB,
+     192,
+@@ -290,7 +290,7 @@
+     &aes_info
+ };
+ 
+-static const mbedtls_cipher_info_t aes_256_cfb128_info = {
++static const mbedtls_cipher_info_t aes_256_cfb128_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_256_CFB128,
+     MBEDTLS_MODE_CFB,
+     256,
+@@ -303,7 +303,7 @@
+ #endif /* MBEDTLS_CIPHER_MODE_CFB */
+ 
+ #if defined(MBEDTLS_CIPHER_MODE_CTR)
+-static const mbedtls_cipher_info_t aes_128_ctr_info = {
++static const mbedtls_cipher_info_t aes_128_ctr_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_128_CTR,
+     MBEDTLS_MODE_CTR,
+     128,
+@@ -314,7 +314,7 @@
+     &aes_info
+ };
+ 
+-static const mbedtls_cipher_info_t aes_192_ctr_info = {
++static const mbedtls_cipher_info_t aes_192_ctr_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_192_CTR,
+     MBEDTLS_MODE_CTR,
+     192,
+@@ -325,7 +325,7 @@
+     &aes_info
+ };
+ 
+-static const mbedtls_cipher_info_t aes_256_ctr_info = {
++static const mbedtls_cipher_info_t aes_256_ctr_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_256_CTR,
+     MBEDTLS_MODE_CTR,
+     256,
+@@ -345,7 +345,7 @@
+                      key, key_bitlen );
+ }
+ 
+-static const mbedtls_cipher_base_t gcm_aes_info = {
++static const mbedtls_cipher_base_t gcm_aes_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ID_AES,
+     NULL,
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+@@ -366,7 +366,7 @@
+     gcm_ctx_free,
+ };
+ 
+-static const mbedtls_cipher_info_t aes_128_gcm_info = {
++static const mbedtls_cipher_info_t aes_128_gcm_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_128_GCM,
+     MBEDTLS_MODE_GCM,
+     128,
+@@ -377,7 +377,7 @@
+     &gcm_aes_info
+ };
+ 
+-static const mbedtls_cipher_info_t aes_192_gcm_info = {
++static const mbedtls_cipher_info_t aes_192_gcm_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_192_GCM,
+     MBEDTLS_MODE_GCM,
+     192,
+@@ -388,7 +388,7 @@
+     &gcm_aes_info
+ };
+ 
+-static const mbedtls_cipher_info_t aes_256_gcm_info = {
++static const mbedtls_cipher_info_t aes_256_gcm_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_256_GCM,
+     MBEDTLS_MODE_GCM,
+     256,
+@@ -408,7 +408,7 @@
+                      key, key_bitlen );
+ }
+ 
+-static const mbedtls_cipher_base_t ccm_aes_info = {
++static const mbedtls_cipher_base_t ccm_aes_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ID_AES,
+     NULL,
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+@@ -429,7 +429,7 @@
+     ccm_ctx_free,
+ };
+ 
+-static const mbedtls_cipher_info_t aes_128_ccm_info = {
++static const mbedtls_cipher_info_t aes_128_ccm_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_128_CCM,
+     MBEDTLS_MODE_CCM,
+     128,
+@@ -440,7 +440,7 @@
+     &ccm_aes_info
+ };
+ 
+-static const mbedtls_cipher_info_t aes_192_ccm_info = {
++static const mbedtls_cipher_info_t aes_192_ccm_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_192_CCM,
+     MBEDTLS_MODE_CCM,
+     192,
+@@ -451,7 +451,7 @@
+     &ccm_aes_info
+ };
+ 
+-static const mbedtls_cipher_info_t aes_256_ccm_info = {
++static const mbedtls_cipher_info_t aes_256_ccm_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_AES_256_CCM,
+     MBEDTLS_MODE_CCM,
+     256,
+@@ -535,7 +535,7 @@
+     mbedtls_free( ctx );
+ }
+ 
+-static const mbedtls_cipher_base_t camellia_info = {
++static const mbedtls_cipher_base_t camellia_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ID_CAMELLIA,
+     camellia_crypt_ecb_wrap,
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+@@ -556,7 +556,7 @@
+     camellia_ctx_free
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_128_ecb_info = {
++static const mbedtls_cipher_info_t camellia_128_ecb_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_128_ECB,
+     MBEDTLS_MODE_ECB,
+     128,
+@@ -567,7 +567,7 @@
+     &camellia_info
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_192_ecb_info = {
++static const mbedtls_cipher_info_t camellia_192_ecb_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_192_ECB,
+     MBEDTLS_MODE_ECB,
+     192,
+@@ -578,7 +578,7 @@
+     &camellia_info
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_256_ecb_info = {
++static const mbedtls_cipher_info_t camellia_256_ecb_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_256_ECB,
+     MBEDTLS_MODE_ECB,
+     256,
+@@ -590,7 +590,7 @@
+ };
+ 
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+-static const mbedtls_cipher_info_t camellia_128_cbc_info = {
++static const mbedtls_cipher_info_t camellia_128_cbc_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_128_CBC,
+     MBEDTLS_MODE_CBC,
+     128,
+@@ -601,7 +601,7 @@
+     &camellia_info
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_192_cbc_info = {
++static const mbedtls_cipher_info_t camellia_192_cbc_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_192_CBC,
+     MBEDTLS_MODE_CBC,
+     192,
+@@ -612,7 +612,7 @@
+     &camellia_info
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_256_cbc_info = {
++static const mbedtls_cipher_info_t camellia_256_cbc_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_256_CBC,
+     MBEDTLS_MODE_CBC,
+     256,
+@@ -625,7 +625,7 @@
+ #endif /* MBEDTLS_CIPHER_MODE_CBC */
+ 
+ #if defined(MBEDTLS_CIPHER_MODE_CFB)
+-static const mbedtls_cipher_info_t camellia_128_cfb128_info = {
++static const mbedtls_cipher_info_t camellia_128_cfb128_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_128_CFB128,
+     MBEDTLS_MODE_CFB,
+     128,
+@@ -636,7 +636,7 @@
+     &camellia_info
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_192_cfb128_info = {
++static const mbedtls_cipher_info_t camellia_192_cfb128_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_192_CFB128,
+     MBEDTLS_MODE_CFB,
+     192,
+@@ -647,7 +647,7 @@
+     &camellia_info
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_256_cfb128_info = {
++static const mbedtls_cipher_info_t camellia_256_cfb128_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_256_CFB128,
+     MBEDTLS_MODE_CFB,
+     256,
+@@ -660,7 +660,7 @@
+ #endif /* MBEDTLS_CIPHER_MODE_CFB */
+ 
+ #if defined(MBEDTLS_CIPHER_MODE_CTR)
+-static const mbedtls_cipher_info_t camellia_128_ctr_info = {
++static const mbedtls_cipher_info_t camellia_128_ctr_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_128_CTR,
+     MBEDTLS_MODE_CTR,
+     128,
+@@ -671,7 +671,7 @@
+     &camellia_info
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_192_ctr_info = {
++static const mbedtls_cipher_info_t camellia_192_ctr_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_192_CTR,
+     MBEDTLS_MODE_CTR,
+     192,
+@@ -682,7 +682,7 @@
+     &camellia_info
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_256_ctr_info = {
++static const mbedtls_cipher_info_t camellia_256_ctr_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_256_CTR,
+     MBEDTLS_MODE_CTR,
+     256,
+@@ -702,7 +702,7 @@
+                      key, key_bitlen );
+ }
+ 
+-static const mbedtls_cipher_base_t gcm_camellia_info = {
++static const mbedtls_cipher_base_t gcm_camellia_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ID_CAMELLIA,
+     NULL,
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+@@ -723,7 +723,7 @@
+     gcm_ctx_free,
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_128_gcm_info = {
++static const mbedtls_cipher_info_t camellia_128_gcm_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_128_GCM,
+     MBEDTLS_MODE_GCM,
+     128,
+@@ -734,7 +734,7 @@
+     &gcm_camellia_info
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_192_gcm_info = {
++static const mbedtls_cipher_info_t camellia_192_gcm_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_192_GCM,
+     MBEDTLS_MODE_GCM,
+     192,
+@@ -745,7 +745,7 @@
+     &gcm_camellia_info
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_256_gcm_info = {
++static const mbedtls_cipher_info_t camellia_256_gcm_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_256_GCM,
+     MBEDTLS_MODE_GCM,
+     256,
+@@ -765,7 +765,7 @@
+                      key, key_bitlen );
+ }
+ 
+-static const mbedtls_cipher_base_t ccm_camellia_info = {
++static const mbedtls_cipher_base_t ccm_camellia_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ID_CAMELLIA,
+     NULL,
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+@@ -786,7 +786,7 @@
+     ccm_ctx_free,
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_128_ccm_info = {
++static const mbedtls_cipher_info_t camellia_128_ccm_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_128_CCM,
+     MBEDTLS_MODE_CCM,
+     128,
+@@ -797,7 +797,7 @@
+     &ccm_camellia_info
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_192_ccm_info = {
++static const mbedtls_cipher_info_t camellia_192_ccm_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_192_CCM,
+     MBEDTLS_MODE_CCM,
+     192,
+@@ -808,7 +808,7 @@
+     &ccm_camellia_info
+ };
+ 
+-static const mbedtls_cipher_info_t camellia_256_ccm_info = {
++static const mbedtls_cipher_info_t camellia_256_ccm_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_CAMELLIA_256_CCM,
+     MBEDTLS_MODE_CCM,
+     256,
+@@ -941,7 +941,7 @@
+     mbedtls_free( ctx );
+ }
+ 
+-static const mbedtls_cipher_base_t des_info = {
++static const mbedtls_cipher_base_t des_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ID_DES,
+     des_crypt_ecb_wrap,
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+@@ -962,7 +962,7 @@
+     des_ctx_free
+ };
+ 
+-static const mbedtls_cipher_info_t des_ecb_info = {
++static const mbedtls_cipher_info_t des_ecb_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_DES_ECB,
+     MBEDTLS_MODE_ECB,
+     MBEDTLS_KEY_LENGTH_DES,
+@@ -974,7 +974,7 @@
+ };
+ 
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+-static const mbedtls_cipher_info_t des_cbc_info = {
++static const mbedtls_cipher_info_t des_cbc_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_DES_CBC,
+     MBEDTLS_MODE_CBC,
+     MBEDTLS_KEY_LENGTH_DES,
+@@ -986,7 +986,7 @@
+ };
+ #endif /* MBEDTLS_CIPHER_MODE_CBC */
+ 
+-static const mbedtls_cipher_base_t des_ede_info = {
++static const mbedtls_cipher_base_t des_ede_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ID_DES,
+     des3_crypt_ecb_wrap,
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+@@ -1007,7 +1007,7 @@
+     des3_ctx_free
+ };
+ 
+-static const mbedtls_cipher_info_t des_ede_ecb_info = {
++static const mbedtls_cipher_info_t des_ede_ecb_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_DES_EDE_ECB,
+     MBEDTLS_MODE_ECB,
+     MBEDTLS_KEY_LENGTH_DES_EDE,
+@@ -1019,7 +1019,7 @@
+ };
+ 
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+-static const mbedtls_cipher_info_t des_ede_cbc_info = {
++static const mbedtls_cipher_info_t des_ede_cbc_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_DES_EDE_CBC,
+     MBEDTLS_MODE_CBC,
+     MBEDTLS_KEY_LENGTH_DES_EDE,
+@@ -1031,7 +1031,7 @@
+ };
+ #endif /* MBEDTLS_CIPHER_MODE_CBC */
+ 
+-static const mbedtls_cipher_base_t des_ede3_info = {
++static const mbedtls_cipher_base_t des_ede3_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ID_3DES,
+     des3_crypt_ecb_wrap,
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+@@ -1052,7 +1052,7 @@
+     des3_ctx_free
+ };
+ 
+-static const mbedtls_cipher_info_t des_ede3_ecb_info = {
++static const mbedtls_cipher_info_t des_ede3_ecb_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_DES_EDE3_ECB,
+     MBEDTLS_MODE_ECB,
+     MBEDTLS_KEY_LENGTH_DES_EDE3,
+@@ -1063,7 +1063,7 @@
+     &des_ede3_info
+ };
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+-static const mbedtls_cipher_info_t des_ede3_cbc_info = {
++static const mbedtls_cipher_info_t des_ede3_cbc_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_DES_EDE3_CBC,
+     MBEDTLS_MODE_CBC,
+     MBEDTLS_KEY_LENGTH_DES_EDE3,
+@@ -1140,7 +1140,7 @@
+     mbedtls_free( ctx );
+ }
+ 
+-static const mbedtls_cipher_base_t blowfish_info = {
++static const mbedtls_cipher_base_t blowfish_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ID_BLOWFISH,
+     blowfish_crypt_ecb_wrap,
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+@@ -1161,7 +1161,7 @@
+     blowfish_ctx_free
+ };
+ 
+-static const mbedtls_cipher_info_t blowfish_ecb_info = {
++static const mbedtls_cipher_info_t blowfish_ecb_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_BLOWFISH_ECB,
+     MBEDTLS_MODE_ECB,
+     128,
+@@ -1173,7 +1173,7 @@
+ };
+ 
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+-static const mbedtls_cipher_info_t blowfish_cbc_info = {
++static const mbedtls_cipher_info_t blowfish_cbc_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_BLOWFISH_CBC,
+     MBEDTLS_MODE_CBC,
+     128,
+@@ -1186,7 +1186,7 @@
+ #endif /* MBEDTLS_CIPHER_MODE_CBC */
+ 
+ #if defined(MBEDTLS_CIPHER_MODE_CFB)
+-static const mbedtls_cipher_info_t blowfish_cfb64_info = {
++static const mbedtls_cipher_info_t blowfish_cfb64_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_BLOWFISH_CFB64,
+     MBEDTLS_MODE_CFB,
+     128,
+@@ -1199,7 +1199,7 @@
+ #endif /* MBEDTLS_CIPHER_MODE_CFB */
+ 
+ #if defined(MBEDTLS_CIPHER_MODE_CTR)
+-static const mbedtls_cipher_info_t blowfish_ctr_info = {
++static const mbedtls_cipher_info_t blowfish_ctr_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_BLOWFISH_CTR,
+     MBEDTLS_MODE_CTR,
+     128,
+@@ -1250,7 +1250,7 @@
+     mbedtls_free( ctx );
+ }
+ 
+-static const mbedtls_cipher_base_t arc4_base_info = {
++static const mbedtls_cipher_base_t arc4_base_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ID_ARC4,
+     NULL,
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+@@ -1271,7 +1271,7 @@
+     arc4_ctx_free
+ };
+ 
+-static const mbedtls_cipher_info_t arc4_128_info = {
++static const mbedtls_cipher_info_t arc4_128_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ARC4_128,
+     MBEDTLS_MODE_STREAM,
+     128,
+@@ -1313,7 +1313,7 @@
+     ((void) ctx);
+ }
+ 
+-static const mbedtls_cipher_base_t null_base_info = {
++static const mbedtls_cipher_base_t null_base_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_ID_NULL,
+     NULL,
+ #if defined(MBEDTLS_CIPHER_MODE_CBC)
+@@ -1334,7 +1334,7 @@
+     null_ctx_free
+ };
+ 
+-static const mbedtls_cipher_info_t null_cipher_info = {
++static const mbedtls_cipher_info_t null_cipher_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_CIPHER_NULL,
+     MBEDTLS_MODE_STREAM,
+     0,
+@@ -1346,7 +1346,7 @@
+ };
+ #endif /* defined(MBEDTLS_CIPHER_NULL_CIPHER) */
+ 
+-const mbedtls_cipher_definition_t mbedtls_cipher_definitions[] =
++const mbedtls_cipher_definition_t mbedtls_cipher_definitions[] ICACHE_RODATA_ATTR =
+ {
+ #if defined(MBEDTLS_AES_C)
+     { MBEDTLS_CIPHER_AES_128_ECB,          &aes_128_ecb_info },
+diff -uNr library_raw/md.c library/md.c
+--- library_raw/md.c	2018-09-03 05:17:31.000000000 +0800
++++ library/md.c	2018-09-03 01:41:09.000000000 +0800
+@@ -30,7 +30,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_MD_C)
+-
++#include "c_types.h"
+ #include "mbedtls/md.h"
+ #include "mbedtls/md_internal.h"
+ 
+@@ -56,7 +56,7 @@
+ /*
+  * Reminder: update profiles in x509_crt.c when adding a new hash!
+  */
+-static const int supported_digests[] = {
++static const int supported_digests[] ICACHE_RODATA_ATTR = {
+ 
+ #if defined(MBEDTLS_SHA512_C)
+         MBEDTLS_MD_SHA512,
+@@ -444,7 +444,7 @@
+     return( 0 );
+ }
+ 
+-unsigned char mbedtls_md_get_size( const mbedtls_md_info_t *md_info )
++int mbedtls_md_get_size( const mbedtls_md_info_t *md_info )
+ {
+     if( md_info == NULL )
+         return( 0 );
+diff -uNr library_raw/md5.c library/md5.c
+--- library_raw/md5.c	2018-09-03 05:17:31.000000000 +0800
++++ library/md5.c	2018-09-03 01:37:53.000000000 +0800
+@@ -31,7 +31,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_MD5_C)
+-
++#include "c_types.h"
+ #include "mbedtls/md5.h"
+ 
+ #include <string.h>
+@@ -275,7 +275,7 @@
+     }
+ }
+ 
+-static const unsigned char md5_padding[64] =
++static const unsigned char md5_padding[64] ICACHE_RODATA_ATTR =
+ {
+  0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+@@ -291,6 +291,9 @@
+     uint32_t last, padn;
+     uint32_t high, low;
+     unsigned char msglen[8];
++    unsigned char md5_padding_local[64];
++
++    memcpy(md5_padding_local, md5_padding, 64);
+ 
+     high = ( ctx->total[0] >> 29 )
+          | ( ctx->total[1] <<  3 );
+@@ -302,7 +305,7 @@
+     last = ctx->total[0] & 0x3F;
+     padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
+ 
+-    mbedtls_md5_update( ctx, md5_padding, padn );
++    mbedtls_md5_update( ctx, md5_padding_local, padn );
+     mbedtls_md5_update( ctx, msglen, 8 );
+ 
+     PUT_UINT32_LE( ctx->state[0], output,  0 );
+diff -uNr library_raw/md_wrap.c library/md_wrap.c
+--- library_raw/md_wrap.c	2018-09-03 05:17:31.000000000 +0800
++++ library/md_wrap.c	2018-09-03 01:21:46.000000000 +0800
+@@ -30,7 +30,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_MD_C)
+-
++#include "c_types.h"
+ #include "mbedtls/md_internal.h"
+ 
+ #if defined(MBEDTLS_MD2_C)
+@@ -240,7 +240,7 @@
+     mbedtls_md5_process( (mbedtls_md5_context *) ctx, data );
+ }
+ 
+-const mbedtls_md_info_t mbedtls_md5_info = {
++const mbedtls_md_info_t mbedtls_md5_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_MD_MD5,
+     "MD5",
+     16,
+@@ -364,7 +364,7 @@
+     mbedtls_sha1_process( (mbedtls_sha1_context *) ctx, data );
+ }
+ 
+-const mbedtls_md_info_t mbedtls_sha1_info = {
++const mbedtls_md_info_t mbedtls_sha1_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_MD_SHA1,
+     "SHA1",
+     20,
+@@ -435,7 +435,7 @@
+     mbedtls_sha256_process( (mbedtls_sha256_context *) ctx, data );
+ }
+ 
+-const mbedtls_md_info_t mbedtls_sha224_info = {
++const mbedtls_md_info_t mbedtls_sha224_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_MD_SHA224,
+     "SHA224",
+     28,
+@@ -461,7 +461,7 @@
+     mbedtls_sha256( input, ilen, output, 0 );
+ }
+ 
+-const mbedtls_md_info_t mbedtls_sha256_info = {
++const mbedtls_md_info_t mbedtls_sha256_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_MD_SHA256,
+     "SHA256",
+     32,
+@@ -529,7 +529,7 @@
+     mbedtls_sha512_process( (mbedtls_sha512_context *) ctx, data );
+ }
+ 
+-const mbedtls_md_info_t mbedtls_sha384_info = {
++const mbedtls_md_info_t mbedtls_sha384_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_MD_SHA384,
+     "SHA384",
+     48,
+@@ -555,7 +555,7 @@
+     mbedtls_sha512( input, ilen, output, 0 );
+ }
+ 
+-const mbedtls_md_info_t mbedtls_sha512_info = {
++const mbedtls_md_info_t mbedtls_sha512_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_MD_SHA512,
+     "SHA512",
+     64,
+diff -uNr library_raw/net.c library/net.c
+--- library_raw/net.c	2018-09-03 05:17:31.000000000 +0800
++++ library/net.c	2018-09-03 01:21:46.000000000 +0800
+@@ -571,5 +571,4 @@
+ 
+     ctx->fd = -1;
+ }
+-
+ #endif /* MBEDTLS_NET_C */
+diff -uNr library_raw/oid.c library/oid.c
+--- library_raw/oid.c	2018-09-03 05:17:31.000000000 +0800
++++ library/oid.c	2018-09-03 01:21:46.000000000 +0800
+@@ -28,7 +28,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_OID_C)
+-
++#include "c_types.h"
+ #include "mbedtls/oid.h"
+ #include "mbedtls/rsa.h"
+ 
+@@ -160,7 +160,7 @@
+     const char          *short_name;
+ } oid_x520_attr_t;
+ 
+-static const oid_x520_attr_t oid_x520_attr_type[] =
++static const oid_x520_attr_t oid_x520_attr_type[] ICACHE_RODATA_ATTR =
+ {
+     {
+         { ADD_LEN( MBEDTLS_OID_AT_CN ),          "id-at-commonName",               "Common Name" },
+@@ -256,7 +256,7 @@
+     int                 ext_type;
+ } oid_x509_ext_t;
+ 
+-static const oid_x509_ext_t oid_x509_ext[] =
++static const oid_x509_ext_t oid_x509_ext[] ICACHE_RODATA_ATTR =
+ {
+     {
+         { ADD_LEN( MBEDTLS_OID_BASIC_CONSTRAINTS ),    "id-ce-basicConstraints",   "Basic Constraints" },
+@@ -287,7 +287,7 @@
+ FN_OID_TYPED_FROM_ASN1(oid_x509_ext_t, x509_ext, oid_x509_ext)
+ FN_OID_GET_ATTR1(mbedtls_oid_get_x509_ext_type, oid_x509_ext_t, x509_ext, int, ext_type)
+ 
+-static const mbedtls_oid_descriptor_t oid_ext_key_usage[] =
++static const mbedtls_oid_descriptor_t oid_ext_key_usage[] ICACHE_RODATA_ATTR =
+ {
+     { ADD_LEN( MBEDTLS_OID_SERVER_AUTH ),      "id-kp-serverAuth",      "TLS Web Server Authentication" },
+     { ADD_LEN( MBEDTLS_OID_CLIENT_AUTH ),      "id-kp-clientAuth",      "TLS Web Client Authentication" },
+@@ -312,7 +312,7 @@
+     mbedtls_pk_type_t           pk_alg;
+ } oid_sig_alg_t;
+ 
+-static const oid_sig_alg_t oid_sig_alg[] =
++static const oid_sig_alg_t oid_sig_alg[] ICACHE_RODATA_ATTR =
+ {
+     {
+         { ADD_LEN( MBEDTLS_OID_PKCS1_MD2 ),        "md2WithRSAEncryption",     "RSA with MD2" },
+@@ -394,7 +394,7 @@
+     mbedtls_pk_type_t           pk_alg;
+ } oid_pk_alg_t;
+ 
+-static const oid_pk_alg_t oid_pk_alg[] =
++static const oid_pk_alg_t oid_pk_alg[] ICACHE_RODATA_ATTR =
+ {
+     {
+         { ADD_LEN( MBEDTLS_OID_PKCS1_RSA ),      "rsaEncryption",   "RSA" },
+@@ -427,7 +427,7 @@
+     mbedtls_ecp_group_id        grp_id;
+ } oid_ecp_grp_t;
+ 
+-static const oid_ecp_grp_t oid_ecp_grp[] =
++static const oid_ecp_grp_t oid_ecp_grp[] ICACHE_RODATA_ATTR =
+ {
+     {
+         { ADD_LEN( MBEDTLS_OID_EC_GRP_SECP192R1 ), "secp192r1",    "secp192r1" },
+@@ -493,7 +493,7 @@
+     mbedtls_cipher_type_t       cipher_alg;
+ } oid_cipher_alg_t;
+ 
+-static const oid_cipher_alg_t oid_cipher_alg[] =
++static const oid_cipher_alg_t oid_cipher_alg[] ICACHE_RODATA_ATTR =
+ {
+     {
+         { ADD_LEN( MBEDTLS_OID_DES_CBC ),              "desCBC",       "DES-CBC" },
+@@ -522,7 +522,7 @@
+     mbedtls_md_type_t           md_alg;
+ } oid_md_alg_t;
+ 
+-static const oid_md_alg_t oid_md_alg[] =
++static const oid_md_alg_t oid_md_alg[] ICACHE_RODATA_ATTR =
+ {
+     {
+         { ADD_LEN( MBEDTLS_OID_DIGEST_ALG_MD2 ),       "id-md2",       "MD2" },
+@@ -577,7 +577,7 @@
+     mbedtls_cipher_type_t       cipher_alg;
+ } oid_pkcs12_pbe_alg_t;
+ 
+-static const oid_pkcs12_pbe_alg_t oid_pkcs12_pbe_alg[] =
++static const oid_pkcs12_pbe_alg_t oid_pkcs12_pbe_alg[] ICACHE_RODATA_ATTR =
+ {
+     {
+         { ADD_LEN( MBEDTLS_OID_PKCS12_PBE_SHA1_DES3_EDE_CBC ), "pbeWithSHAAnd3-KeyTripleDES-CBC", "PBE with SHA1 and 3-Key 3DES" },
+diff -uNr library_raw/pk_wrap.c library/pk_wrap.c
+--- library_raw/pk_wrap.c	2018-09-03 05:17:31.000000000 +0800
++++ library/pk_wrap.c	2018-09-03 01:21:46.000000000 +0800
+@@ -26,6 +26,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_PK_C)
++#include "c_types.h"
+ #include "mbedtls/pk_internal.h"
+ 
+ /* Even if RSA not activated, for the sake of RSA-alt */
+@@ -160,7 +161,7 @@
+     items->value = &( ((mbedtls_rsa_context *) ctx)->E );
+ }
+ 
+-const mbedtls_pk_info_t mbedtls_rsa_info = {
++const mbedtls_pk_info_t mbedtls_rsa_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_PK_RSA,
+     "RSA",
+     rsa_get_bitlen,
+@@ -270,7 +271,7 @@
+     items->value = &( ((mbedtls_ecp_keypair *) ctx)->Q );
+ }
+ 
+-const mbedtls_pk_info_t mbedtls_eckey_info = {
++const mbedtls_pk_info_t mbedtls_eckey_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_PK_ECKEY,
+     "EC",
+     eckey_get_bitlen,
+@@ -299,7 +300,7 @@
+             type == MBEDTLS_PK_ECKEY_DH );
+ }
+ 
+-const mbedtls_pk_info_t mbedtls_eckeydh_info = {
++const mbedtls_pk_info_t mbedtls_eckeydh_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_PK_ECKEY_DH,
+     "EC_DH",
+     eckey_get_bitlen,         /* Same underlying key structure */
+@@ -362,7 +363,7 @@
+     mbedtls_free( ctx );
+ }
+ 
+-const mbedtls_pk_info_t mbedtls_ecdsa_info = {
++const mbedtls_pk_info_t mbedtls_ecdsa_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_PK_ECDSA,
+     "ECDSA",
+     eckey_get_bitlen,     /* Compatible key structures */
+@@ -471,7 +472,7 @@
+     mbedtls_free( ctx );
+ }
+ 
+-const mbedtls_pk_info_t mbedtls_rsa_alt_info = {
++const mbedtls_pk_info_t mbedtls_rsa_alt_info ICACHE_RODATA_ATTR = {
+     MBEDTLS_PK_RSA_ALT,
+     "RSA-alt",
+     rsa_alt_get_bitlen,
+diff -uNr library_raw/sha1.c library/sha1.c
+--- library_raw/sha1.c	2018-09-03 05:17:31.000000000 +0800
++++ library/sha1.c	2018-09-03 01:38:14.000000000 +0800
+@@ -31,7 +31,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_SHA1_C)
+-
++#include "c_types.h"
+ #include "mbedtls/sha1.h"
+ 
+ #include <string.h>
+@@ -307,7 +307,7 @@
+         memcpy( (void *) (ctx->buffer + left), input, ilen );
+ }
+ 
+-static const unsigned char sha1_padding[64] =
++static const unsigned char sha1_padding[64] ICACHE_RODATA_ATTR =
+ {
+  0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+@@ -323,6 +323,9 @@
+     uint32_t last, padn;
+     uint32_t high, low;
+     unsigned char msglen[8];
++    unsigned char sha1_padding_local[64];
++
++    memcpy(sha1_padding_local, sha1_padding, 64);
+ 
+     high = ( ctx->total[0] >> 29 )
+          | ( ctx->total[1] <<  3 );
+@@ -334,7 +337,7 @@
+     last = ctx->total[0] & 0x3F;
+     padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
+ 
+-    mbedtls_sha1_update( ctx, sha1_padding, padn );
++    mbedtls_sha1_update( ctx, sha1_padding_local, padn );
+     mbedtls_sha1_update( ctx, msglen, 8 );
+ 
+     PUT_UINT32_BE( ctx->state[0], output,  0 );
+diff -uNr library_raw/sha256.c library/sha256.c
+--- library_raw/sha256.c	2018-09-03 05:17:31.000000000 +0800
++++ library/sha256.c	2018-09-03 01:38:38.000000000 +0800
+@@ -31,7 +31,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_SHA256_C)
+-
++#include "c_types.h"
+ #include "mbedtls/sha256.h"
+ 
+ #include <string.h>
+@@ -131,7 +131,7 @@
+ }
+ 
+ #if !defined(MBEDTLS_SHA256_PROCESS_ALT)
+-static const uint32_t K[] =
++static const uint32_t K[] ICACHE_RODATA_ATTR STORE_ATTR =
+ {
+     0x428A2F98, 0x71374491, 0xB5C0FBCF, 0xE9B5DBA5,
+     0x3956C25B, 0x59F111F1, 0x923F82A4, 0xAB1C5ED5,
+@@ -273,7 +273,7 @@
+         memcpy( (void *) (ctx->buffer + left), input, ilen );
+ }
+ 
+-static const unsigned char sha256_padding[64] =
++static const unsigned char sha256_padding[64] ICACHE_RODATA_ATTR =
+ {
+  0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+@@ -289,6 +289,9 @@
+     uint32_t last, padn;
+     uint32_t high, low;
+     unsigned char msglen[8];
++    unsigned char sha256_padding_local[64];
++
++    memcpy(sha256_padding_local, sha256_padding, 64);
+ 
+     high = ( ctx->total[0] >> 29 )
+          | ( ctx->total[1] <<  3 );
+@@ -300,7 +303,7 @@
+     last = ctx->total[0] & 0x3F;
+     padn = ( last < 56 ) ? ( 56 - last ) : ( 120 - last );
+ 
+-    mbedtls_sha256_update( ctx, sha256_padding, padn );
++    mbedtls_sha256_update( ctx, sha256_padding_local, padn );
+     mbedtls_sha256_update( ctx, msglen, 8 );
+ 
+     PUT_UINT32_BE( ctx->state[0], output,  0 );
+diff -uNr library_raw/sha512.c library/sha512.c
+--- library_raw/sha512.c	2018-09-03 05:17:31.000000000 +0800
++++ library/sha512.c	2018-09-03 01:38:51.000000000 +0800
+@@ -31,7 +31,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_SHA512_C)
+-
++#include "c_types.h"
+ #include "mbedtls/sha512.h"
+ 
+ #if defined(_MSC_VER) || defined(__WATCOMC__)
+@@ -92,7 +92,7 @@
+ /*
+  * Round constants
+  */
+-static const uint64_t K[80] =
++static const uint64_t K[80] ICACHE_RODATA_ATTR STORE_ATTR =
+ {
+     UL64(0x428A2F98D728AE22),  UL64(0x7137449123EF65CD),
+     UL64(0xB5C0FBCFEC4D3B2F),  UL64(0xE9B5DBA58189DBBC),
+@@ -302,7 +302,7 @@
+         memcpy( (void *) (ctx->buffer + left), input, ilen );
+ }
+ 
+-static const unsigned char sha512_padding[128] =
++static const unsigned char sha512_padding[128] ICACHE_RODATA_ATTR STORE_ATTR =
+ {
+  0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+@@ -322,6 +322,9 @@
+     size_t last, padn;
+     uint64_t high, low;
+     unsigned char msglen[16];
++    unsigned char sha512_padding_local[128];
++
++    memcpy(sha512_padding_local, sha512_padding, 128);
+ 
+     high = ( ctx->total[0] >> 61 )
+          | ( ctx->total[1] <<  3 );
+@@ -333,7 +336,8 @@
+     last = (size_t)( ctx->total[0] & 0x7F );
+     padn = ( last < 112 ) ? ( 112 - last ) : ( 240 - last );
+ 
+-    mbedtls_sha512_update( ctx, sha512_padding, padn );
++
++    mbedtls_sha512_update( ctx, sha512_padding_local, padn );
+     mbedtls_sha512_update( ctx, msglen, 16 );
+ 
+     PUT_UINT64_BE( ctx->state[0], output,  0 );
+diff -uNr library_raw/ssl_ciphersuites.c library/ssl_ciphersuites.c
+--- library_raw/ssl_ciphersuites.c	2018-09-03 05:17:31.000000000 +0800
++++ library/ssl_ciphersuites.c	2018-09-03 01:21:46.000000000 +0800
+@@ -28,7 +28,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_SSL_TLS_C)
+-
++#include "c_types.h"
+ #include "mbedtls/ssl_ciphersuites.h"
+ #include "mbedtls/ssl.h"
+ 
+@@ -47,7 +47,7 @@
+  * 4. By hash function used when relevant
+  * 5. By key exchange/auth again: EC > non-EC
+  */
+-static const int ciphersuite_preference[] =
++static const int ciphersuite_preference[] ICACHE_RODATA_ATTR STORE_ATTR =
+ {
+ #if defined(MBEDTLS_SSL_CIPHERSUITES)
+     MBEDTLS_SSL_CIPHERSUITES,
+@@ -259,7 +259,7 @@
+     0
+ };
+ 
+-static const mbedtls_ssl_ciphersuite_t ciphersuite_definitions[] =
++static const mbedtls_ssl_ciphersuite_t ciphersuite_definitions[] ICACHE_RODATA_ATTR STORE_ATTR =
+ {
+ #if defined(MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED)
+ #if defined(MBEDTLS_AES_C)
+diff -uNr library_raw/ssl_cli.c library/ssl_cli.c
+--- library_raw/ssl_cli.c	2018-09-03 05:17:31.000000000 +0800
++++ library/ssl_cli.c	2018-09-03 01:21:46.000000000 +0800
+@@ -3284,7 +3284,7 @@
+         ssl->state = MBEDTLS_SSL_SERVER_NEW_SESSION_TICKET;
+     }
+ #endif
+-
++	
+     switch( ssl->state )
+     {
+         case MBEDTLS_SSL_HELLO_REQUEST:
+diff -uNr library_raw/x509_create.c library/x509_create.c
+--- library_raw/x509_create.c	2018-09-03 05:17:31.000000000 +0800
++++ library/x509_create.c	2018-09-03 01:21:46.000000000 +0800
+@@ -26,7 +26,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_X509_CREATE_C)
+-
++#include "c_types.h"
+ #include "mbedtls/x509.h"
+ #include "mbedtls/asn1write.h"
+ #include "mbedtls/oid.h"
+@@ -41,7 +41,7 @@
+ 
+ #define ADD_STRLEN( s )     s, sizeof( s ) - 1
+ 
+-static const x509_attr_descriptor_t x509_attrs[] =
++static const x509_attr_descriptor_t x509_attrs[] ICACHE_RODATA_ATTR STORE_ATTR =
+ {
+     { ADD_STRLEN( "CN" ),                       MBEDTLS_OID_AT_CN },
+     { ADD_STRLEN( "commonName" ),               MBEDTLS_OID_AT_CN },
+diff -uNr library_raw/x509_crt.c library/x509_crt.c
+--- library_raw/x509_crt.c	2018-09-03 05:17:31.000000000 +0800
++++ library/x509_crt.c	2018-09-03 01:21:46.000000000 +0800
+@@ -36,7 +36,7 @@
+ #endif
+ 
+ #if defined(MBEDTLS_X509_CRT_PARSE_C)
+-
++#include "c_types.h"
+ #include "mbedtls/x509_crt.h"
+ #include "mbedtls/oid.h"
+ 
+@@ -83,7 +83,7 @@
+ /*
+  * Default profile
+  */
+-const mbedtls_x509_crt_profile mbedtls_x509_crt_profile_default =
++const mbedtls_x509_crt_profile mbedtls_x509_crt_profile_default ICACHE_RODATA_ATTR =
+ {
+     /* Hashes from SHA-1 and above */
+     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA1 ) |
+@@ -100,7 +100,7 @@
+ /*
+  * Next-default profile
+  */
+-const mbedtls_x509_crt_profile mbedtls_x509_crt_profile_next =
++const mbedtls_x509_crt_profile mbedtls_x509_crt_profile_next ICACHE_RODATA_ATTR =
+ {
+     /* Hashes from SHA-256 and above */
+     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 ) |
+@@ -125,7 +125,7 @@
+ /*
+  * NSA Suite B Profile
+  */
+-const mbedtls_x509_crt_profile mbedtls_x509_crt_profile_suiteb =
++const mbedtls_x509_crt_profile mbedtls_x509_crt_profile_suiteb ICACHE_RODATA_ATTR =
+ {
+     /* Only SHA-256 and 384 */
+     MBEDTLS_X509_ID_FLAG( MBEDTLS_MD_SHA256 ) |
+@@ -1467,6 +1467,7 @@
+     const char *string;
+ };
+ 
++#if 0
+ static const struct x509_crt_verify_string x509_crt_verify_strings[] = {
+     { MBEDTLS_X509_BADCERT_EXPIRED,       "The certificate validity has expired" },
+     { MBEDTLS_X509_BADCERT_REVOKED,       "The certificate has been revoked (is on a CRL)" },
+@@ -1490,6 +1491,31 @@
+     { MBEDTLS_X509_BADCRL_BAD_KEY,        "The CRL is signed with an unacceptable key (eg bad curve, RSA too short)." },
+     { 0, NULL }
+ };
++#else
++static const struct x509_crt_verify_string x509_crt_verify_strings[] = {
++    { MBEDTLS_X509_BADCERT_EXPIRED,       NULL },
++    { MBEDTLS_X509_BADCERT_REVOKED,       NULL },
++    { MBEDTLS_X509_BADCERT_CN_MISMATCH,   NULL },
++    { MBEDTLS_X509_BADCERT_NOT_TRUSTED,   NULL },
++    { MBEDTLS_X509_BADCRL_NOT_TRUSTED,    NULL },
++    { MBEDTLS_X509_BADCRL_EXPIRED,        NULL },
++    { MBEDTLS_X509_BADCERT_MISSING,       NULL },
++    { MBEDTLS_X509_BADCERT_SKIP_VERIFY,   NULL },
++    { MBEDTLS_X509_BADCERT_OTHER,         NULL },
++    { MBEDTLS_X509_BADCERT_FUTURE,        NULL },
++    { MBEDTLS_X509_BADCRL_FUTURE,         NULL },
++    { MBEDTLS_X509_BADCERT_KEY_USAGE,     NULL },
++    { MBEDTLS_X509_BADCERT_EXT_KEY_USAGE, NULL },
++    { MBEDTLS_X509_BADCERT_NS_CERT_TYPE,  NULL },
++    { MBEDTLS_X509_BADCERT_BAD_MD,        NULL },
++    { MBEDTLS_X509_BADCERT_BAD_PK,        NULL },
++    { MBEDTLS_X509_BADCERT_BAD_KEY,       NULL },
++    { MBEDTLS_X509_BADCRL_BAD_MD,         NULL },
++    { MBEDTLS_X509_BADCRL_BAD_PK,         NULL },
++    { MBEDTLS_X509_BADCRL_BAD_KEY,        NULL },
++    { 0, NULL }
++};
++#endif
+ 
+ int mbedtls_x509_crt_verify_info( char *buf, size_t size, const char *prefix,
+                           uint32_t flags )
