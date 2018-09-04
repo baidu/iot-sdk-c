@@ -24,7 +24,7 @@ mbedtls 很适合应用于嵌入式系统中，可以作为 openssl 的替代者
 
 - clone 源代码
 ```
-git clone https://github.com/ARMmbed/mbedtls.git
+git clone  -b mbedtls-2.12.0 https://github.com/ARMmbed/mbedtls.git
 ```
 - 裁剪
 为节省ROM和RAM，修改配置文件`include/mbedtls/config.h`,注释如下宏定义
@@ -55,9 +55,6 @@ make install DESTDIR=`pwd`/install
 所以只要将lib文件夹中的.so文件删除，系统在编译的时候就会使用静态库编译。
 
 用静态链接，程序执行的效率会更高一些，但缺点是可执行程序太大，占用空间。
-
-编译程序的时，用`-L` `-l`选项链接相应动态库就行了。注意引用库的顺序为：`-lssl -lcrypto`，如果为`-lcrypto –lssl`，编译时会出现错误。
-
 
 
 ## 示例工程的编译

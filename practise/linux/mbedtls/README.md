@@ -24,7 +24,7 @@ mbedtls 很适合应用于嵌入式系统中，可以作为 openssl 的替代者
 
 - clone 源代码
 ```
-git clone https://github.com/ARMmbed/mbedtls.git
+git clone -b mbedtls-2.12.0 https://github.com/ARMmbed/mbedtls.git
 ```
 - 编译，安装。
 ```
