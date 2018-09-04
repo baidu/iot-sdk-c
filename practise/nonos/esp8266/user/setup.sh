@@ -18,6 +18,8 @@ MQTT_VER=2ebbe7f19a449
 
 if [ ! -d "$TMP_DIR" ]; then
     mkdir -p $TMP_DIR
+    mkdir -p src
+    mkdir -p inc
     cd $TMP_DIR
     # copy the SDK project
     echo `pwd`

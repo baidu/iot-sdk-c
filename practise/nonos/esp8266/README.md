@@ -1,8 +1,9 @@
 本工程是针对 esp8266-nonos 版本的适配。相比于嵌入式linux 或 FreeRTOS,涉及到的库以及代码的修改会多一些。  
 这也是由 esp8266-nonos SDK 的特性决定的：  
 - 因为不带OS，并且是单线程，任何的sleep或者block操作（长时间占用CPU)都可能会引起watchdog reset或导致网络功能运行不正常，故所有的逻辑必须是基于`定时器`和`回调`的。
-- esp8266 RAM 允许加载的代码量是有限制的，最大为32K，无法在运行时一次性装下edge sdk的所有代码。故需要在每个C函数前加上`ICACHE_FLASH_ATTR`属性，该属性表示将代码存放在Flash上，需要用到的时候再调入cache中运行。
-- esp8266 运行时 stack 和 heap 可用的空间大约50k左右，内存资源紧张，为了给 TLS 的正常运行留出足够的空间，需要对部分代码做优化。  
+- esp8266 RAM总量为 160K，运行时 stack 和 heap 可用的空间大约50k左右，内存资源紧张，为了给 TLS 的正常运行留出足够的空间，需要对部分代码做优化。  
+- esp8266 RAM 允许加载的代码量是有限制的，最大为32K，无法在运行时一次性装下edge sdk的所有代码。故需要在每个C函数前加上`ICACHE_FLASH_ATTR`属性，该属性表示将代码存放在Flash上，需要用到的时候再调入内存中运行。
+
 
 鉴于以上限制，我们会将涉及到的edge sdk 代码拷贝一份，并做适当的修改，独立成一个小工程。  
 
@@ -94,13 +95,13 @@ mbedtls 采用模块化设计，代码编写时使用宏定义的方式将平台
 - 打印模块
 
 #### 适配网络模块
-网络模块 net.c 文件中对套接字接口进行了封装，用户可以将接口进行替换，替换后通过 mbedtls_ssl_set_bio() 接口来注册发送和接收接口，根据需要开启或关闭超时检测、阻塞/非阻塞功能。在这里，我们没有使用 mbedtls 的TCP/IP收发功能，因为是裸板程序，系统也未提供套接字接口供我们使用。我们只需要利用 mbedtls 库进行加解密，底层数据的收发是通过 espconn 接口。所以，网络模块的适配，我们暂时可以略过。
+网络模块 net.c 文件中对套接字接口进行了封装，用户可以将接口进行替换，替换后通过 mbedtls_ssl_set_bio() 接口来注册发送和接收接口，根据需要开启或关闭超时检测、阻塞/非阻塞功能。在这里，我们没有使用 mbedtls 的TCP/IP收发功能，因为是裸板程序，系统也未提供套接字接口供我们使用。我们只需要利用 mbedtls 库进行加解密，底层数据的收发是通过 `espconn` 接口。所以，网络模块的适配，我们暂时可以略过。
 
 #### 适配时间模块
 如果在系统中需要使用 DTLS 协议，则需要适配时间模块来提供相关接口。我们未使用 DTLS 协议，故时间模块可以暂时略过。
 
 #### 适配熵源模块
-在密码学中随机数是最基础的也是最重要的部分，mbedtls 中的熵池属于随机数模块部分，在 Linux 下可以使用 /dev/urandom 来提供熵源，在新的平台需要用户提供类似的熵源采集接口。可以通过定义 MBEDTLS_ENTROPY_HARDWARE_ALT 添加熵源采集接口。另外，如果平台无法提供 /dev/urandom 或 Windows CryptoAPI 的支持，则需要增加 MBEDTLS_NO_PLATFORM_ENTROPY 定义。  
+在密码学中随机数是最基础的也是最重要的部分，mbedtls 中的熵池属于随机数模块部分，在 Linux 下可以使用 `/dev/urandom` 来提供熵源，在新的平台需要用户提供类似的熵源采集接口。可以通过定义 `MBEDTLS_ENTROPY_HARDWARE_ALT` 添加熵源采集接口。另外，如果平台无法提供 `/dev/urandom` 或 `Windows CryptoAPI` 的支持，则需要增加 `MBEDTLS_NO_PLATFORM_ENTROPY` 定义。  
 
 在 esp8266 平台下熵源模块的适配文件`platform/esp_hardware.c`我们已经提供。
 
@@ -108,7 +109,7 @@ mbedtls 采用模块化设计，代码编写时使用宏定义的方式将平台
 如果硬件平台支持加密算法，用户可以通过定义 MBEDTLS_*_ALT 来添加自己的硬件加密接口，比如 MBEDTLS_AES_ALT 可以用来替换 AES 加密相关接口。在这里我们未使用。暂时略过。
 
 #### 适配打印模块
-mbedtls 调试打印接口使用的是标准库函数 printf()，用户如果想要将其替换为自己的接口，可以定义 MBEDTLS_PLATFORM_PRINTF_MACRO 来添加自己的打印接口。也可以通过定义 MBEDTLS_PLATFORM_PRINTF_ALT 然后调用 mbedtls_platform_set_printf() 接口设置自己的打印接口。
+mbedtls 调试打印接口使用的是标准库函数 printf()，用户如果想要将其替换为自己的接口，可以定义 `MBEDTLS_PLATFORM_PRINTF_MACRO` 来添加自己的打印接口。也可以通过定义 `MBEDTLS_PLATFORM_PRINTF_ALT` 然后调用 mbedtls_platform_set_printf() 接口设置自己的打印接口。
 
 在 esp8266 平台下打印模块的适配文件在`include/mbedtls/platform.h`。文件修改如下：
 ```c
@@ -157,7 +158,7 @@ extern void vPortFree( void *pv );
 以上，系统抽象层接口就适配完了。
 
 ### ESP8266 内存优化
-完成系统抽象层的工作还是远远不够的。一些额外的因素还需要考虑。例如，esp8266 对加载到ram的代码容量是有限制的，最大为30k。显然，我们的库编译出的大小已经超过该值，故只能将代码存放到外部的 flash 上。在运行时，如果调用到库代码，cpu将读取flash中的代码片段，加载到 cache 中运行。为了实现代码存放在 flash上而不是加载到 ram,需要在每个 C 函数前加上 `ICACHE_FLASH_ATTR` 属性。比较繁琐。所以在这里直接在Makefile 中修改生成的目标文件中的段名，可以达到同样的效果。
+完成系统抽象层的工作还是远远不够的。一些额外的因素还需要考虑。例如，esp8266 对加载到ram的代码容量是有限制的，最大为30k。显然，我们的库编译出的大小已经超过该值，故只能将代码存放到外部的 flash 上。在运行时，如果调用到库代码，cpu将读取flash中的代码片段，加载到内存中运行。为了实现代码存放在 flash上而不是加载到 ram,需要在每个 C 函数前加上 `ICACHE_FLASH_ATTR` 属性。比较繁琐。所以在这里直接在Makefile 中修改生成的目标文件中的段名，可以达到同样的效果。
 ```Makefile
 $1/%.o: %.c
 	$(vecho) "CC $$<"
@@ -187,7 +188,23 @@ patch -p1 < ../memory_opt.patch
 cd ..
 make
 ```
-编译成功，在当前目录下生成`libmbedtls.a`。
+可能出现如下编译错误:
+```
+CC library/md.c
+library/md.c:447:5: error: conflicting types for 'mbedtls_md_get_size'
+ int mbedtls_md_get_size( const mbedtls_md_info_t *md_info )
+     ^
+In file included from library/md.c:34:0:
+./include/mbedtls/md.h:185:15: note: previous declaration of 'mbedtls_md_get_size' was here
+ unsigned char mbedtls_md_get_size( const mbedtls_md_info_t *md_info );
+               ^
+make: *** [build/library/md.o] Error 1
+```
+这应该是 mbedtls 的bug, 解决的办法就是修改下头文件中的声明：
+```sh
+vim ./include/mbedtls/md.h +185 # 将"unsigned char" 改成 "int"
+```
+重新编译，编译成功，在当前目录下生成`libmbedtls.a`。
 
 
 ## 编译 edge sdk 库以及 sample demo
@@ -205,6 +222,7 @@ cd ..           # 返回主工程目录
 vim Makefile    # 修改 Makefile
 ```
 Makefile的修改很简单，只要修改`OPEN_SDK`为你的你的`$OPEN_SDK`路径就可以了。修改完成，直接 make，如果一切正常，就会生成 user1.bin。可以用`ESP FLASH DOWNLOAD TOOL`工具进行烧写。镜像的排布顺序为：  
+
 | 地址 | 镜像 |
 | ------ | ------ |
 | 0x0000 | boot_v1.7.bin |
