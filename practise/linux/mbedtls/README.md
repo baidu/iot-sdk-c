@@ -59,7 +59,7 @@ make: *** [lib] Error 2
 
 - clone 源代码
 ```
-git clone https://github.com/ARMmbed/mbedtls.git
+git clone -b mbedtls-2.12.0  https://github.com/ARMmbed/mbedtls.git
 ```
 - 裁剪
 为节省ROM和RAM，修改配置文件`include/mbedtls/config.h`,注释如下宏定义

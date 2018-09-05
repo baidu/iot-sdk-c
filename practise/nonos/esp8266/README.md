@@ -108,10 +108,11 @@ mbedtls 采用模块化设计，代码编写时使用宏定义的方式将平台
 #### 适配硬件加速
 如果硬件平台支持加密算法，用户可以通过定义 MBEDTLS_*_ALT 来添加自己的硬件加密接口，比如 MBEDTLS_AES_ALT 可以用来替换 AES 加密相关接口。在这里我们未使用。暂时略过。
 
-#### 适配打印模块
-mbedtls 调试打印接口使用的是标准库函数 printf()，用户如果想要将其替换为自己的接口，可以定义 `MBEDTLS_PLATFORM_PRINTF_MACRO` 来添加自己的打印接口。也可以通过定义 `MBEDTLS_PLATFORM_PRINTF_ALT` 然后调用 mbedtls_platform_set_printf() 接口设置自己的打印接口。
-
-在 esp8266 平台下打印模块的适配文件在`include/mbedtls/platform.h`。文件修改如下：
+#### 适配系统抽象层接口
+比如在 esp8266 中的 os_malloc os_printf ets_snprintf 这些系统调用，怎么映射到 mbedtls 中响应到函数中去呢？  
+首先，你得告诉 mbedtls ，你需要使用 平台抽象层代理函数，而不是用默认的 printf malloc snprintf等等这些标准C函数。  
+只需要在`config_esp.h`中打开`MBEDTLS_PLATFORM_C`开关就可以了。如果不定义该宏，mbedtls就会使用标准C库的函数集。  
+在 mbedtls 中的 平台抽象层代理函数 名字叫 mbedtls_calloc mbedtls_free mbedtls_printf 等等，这些“虚”函数，所以你现在需要做的就是定义一些映射关系。这些映射关系都定义在`include/mbedtls/platform.h`中：
 ```c
 #ifndef MBEDTLS_PLATFORM_H
 #define MBEDTLS_PLATFORM_H
@@ -131,20 +132,20 @@ extern void *pvPortCalloc(unsigned int count, unsigned int size);
 extern void vPortFree( void *pv );
 #define MBEDTLS_PLATFORM_NO_STD_FUNCTIONS
 
-//适配 esp8266 平台的 malloc/free 函数
+//映射 esp8266 平台的 malloc/free 函数
 #define mbedtls_free       vPortFree
 #define mbedtls_calloc     pvPortCalloc
 
-//适配 esp8266 平台的 fprintf 函数
+//映射 esp8266 平台的 fprintf 函数
 #define mbedtls_fprintf    fprintf
 
-//适配 esp8266 平台的 printf 函数
+//映射 esp8266 平台的 printf 函数
 #define mbedtls_printf     os_printf
 
-//适配 esp8266 平台的 snprintf 函数
+//映射 esp8266 平台的 snprintf 函数
 #define mbedtls_snprintf   ets_snprintf
 
-//适配 esp8266 平台的 exit 函数
+//映射 esp8266 平台的 exit 函数
 #define mbedtls_exit   exit
 
 
@@ -156,6 +157,9 @@ extern void vPortFree( void *pv );
 ```
 
 以上，系统抽象层接口就适配完了。
+
+#### 其他重要参数设置
+在 mbedtls 的适配中，还需要特别说明的一个参数是`MBEDTLS_SSL_MAX_CONTENT_LEN`，定义在config文件中。这个值表示在ssl通讯中，消息记录的长度的最大值，比如，在我们的应用场景下，最长的消息记录出现在 handshake 时候，server 发送证书给客户端，该条消息记录长达5K多，所以，在我们的应用场景下，我们选取一个稍稍大于5K的值，故该值设置为`0x1800`(十进制 6144)，mbedtls 在初始化时，就会分配这么大的两块 io_buffer,以便可以一次性装下整条消息记录。如果该值设置太小，mbedtls 则会在握手的过程中会返回`MBEDTLS_ERR_SSL_INVALID_RECORD`或者"bad message length"之类的错误。当然，该值也不必取过大，无端浪费内存空间。
 
 ### ESP8266 内存优化
 完成系统抽象层的工作还是远远不够的。一些额外的因素还需要考虑。例如，esp8266 对加载到ram的代码容量是有限制的，最大为30k。显然，我们的库编译出的大小已经超过该值，故只能将代码存放到外部的 flash 上。在运行时，如果调用到库代码，cpu将读取flash中的代码片段，加载到内存中运行。为了实现代码存放在 flash上而不是加载到 ram,需要在每个 C 函数前加上 `ICACHE_FLASH_ATTR` 属性。比较繁琐。所以在这里直接在Makefile 中修改生成的目标文件中的段名，可以达到同样的效果。
@@ -213,7 +217,7 @@ vim ./include/mbedtls/md.h +185 # 将"unsigned char" 改成 "int"
 用户配置工程的步骤如下：
 ```sh
 cd user
-./setup.sh  #该脚本会从 iot_edge_c_sdk 中拷贝所需要的代码，然后打 patch
+./setup.sh  #该脚本会从 iot_edge_c_sdk 中拷贝所需要的代码到 src 目录，然后打 patch
 ```
 
 所有的代码以及库都准备 ok，现在可以编译整个工程了。  
