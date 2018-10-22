@@ -24,6 +24,7 @@
 #include "mbedtls/x509_crt.h"
 #include <string.h>
 #include <azure_c_shared_utility/xlogging.h>
+#include "azure_c_shared_utility/platform_dep.h"
 
 #include "rsa_signer.h"
 

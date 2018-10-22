@@ -22,6 +22,7 @@
 #include <azure_c_shared_utility/strings.h>
 #include "iotdm_client.h"
 #include "iothub_mqtt_client.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 #define     SUB_TOPIC_SIZE                  9
 #define     SUB_METHOD_TOPIC_SIZE           2

@@ -14,6 +14,7 @@
 #include "schema.h"
 #include "codefirst.h"
 #include "jsondecoder.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 DEFINE_ENUM_STRINGS(COMMANDDECODER_RESULT, COMMANDDECODER_RESULT_VALUES);
 

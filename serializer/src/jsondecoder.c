@@ -3,6 +3,7 @@
 
 #include "azure_c_shared_utility/gballoc.h"
 #include "azure_c_shared_utility/crt_abstractions.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 #include "jsondecoder.h"
 #include <stdio.h>

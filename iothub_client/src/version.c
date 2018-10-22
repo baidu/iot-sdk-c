@@ -18,6 +18,7 @@
 */
 
 #include "iothub_client_version.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 const char* IoTHubClient_GetVersionString(void)
 {

@@ -8,6 +8,7 @@
 #include <wolfssl/wolfcrypt/signature.h>
 
 #include <azure_c_shared_utility/base64.h>
+#include "azure_c_shared_utility/platform_dep.h"
 
 enum wc_SignatureType sig_type = WC_SIGNATURE_TYPE_RSA_W_ENC;
 enum wc_HashType hash_type = WC_HASH_TYPE_SHA256;

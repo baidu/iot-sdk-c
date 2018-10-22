@@ -23,6 +23,7 @@
 
 #include "azure_c_shared_utility/agenttime.h"
 #include "azure_c_shared_utility/xlogging.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 #define RESULT_OK           0
 #define INDEFINITE_TIME     ((time_t)-1)

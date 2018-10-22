@@ -9,6 +9,7 @@
 #include "azure_c_shared_utility/crt_abstractions.h"
 #include "azure_c_shared_utility/xlogging.h"
 #include "azure_c_shared_utility/macro_utils.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 /*assume a name cannot be longer than 100 characters*/
 #define INNER_NODE_NAME_SIZE 128

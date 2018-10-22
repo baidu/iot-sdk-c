@@ -13,6 +13,7 @@
 #include "azure_c_shared_utility/xlogging.h"
 #include "parson.h"
 #include "azure_c_shared_utility/vector.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 DEFINE_ENUM_STRINGS(DATA_MARSHALLER_RESULT, DATA_MARSHALLER_RESULT_VALUES);
 

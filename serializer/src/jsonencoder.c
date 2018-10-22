@@ -7,6 +7,7 @@
 #include "azure_c_shared_utility/crt_abstractions.h"
 #include "azure_c_shared_utility/xlogging.h"
 #include "azure_c_shared_utility/strings.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable: 4701) /* potentially uninitialized local variable 'result' used */ /* the scanner cannot track variable "i" and link it to childCount*/

@@ -8,6 +8,7 @@
 #include "schemaserializer.h"
 #include "azure_c_shared_utility/xlogging.h"
 #include "azure_c_shared_utility/macro_utils.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 DEFINE_ENUM_STRINGS(SCHEMA_SERIALIZER_RESULT, SCHEMA_SERIALIZER_RESULT_VALUES);
 

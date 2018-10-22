@@ -21,6 +21,7 @@
 #include <crtdbg.h>
 #endif
 #include "iothub_client_persistence.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 #ifdef USE_SQLITE_PERSISTENCE
 #include "iothub_client_persistence_sqlite.h"

@@ -23,6 +23,7 @@
 #include "azure_c_shared_utility/socketio.h"
 #include "azure_c_shared_utility/platform.h"
 #include "certs.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 #define EPOCH_TIME_T_VALUE          0
 #define EPOCH_TIME_T_VALUE          0

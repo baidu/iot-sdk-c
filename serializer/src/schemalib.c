@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include "azure_c_shared_utility/xlogging.h"
 #include "iotdevice.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 #define DEFAULT_CONTAINER_NAME  "Container"
 

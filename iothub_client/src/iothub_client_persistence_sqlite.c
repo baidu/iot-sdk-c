@@ -25,6 +25,7 @@
 #include <azure_c_shared_utility/xlogging.h>
 #include <azure_c_shared_utility/crt_abstractions.h>
 #include "iothub_client_persistence_sqlite.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 struct SQLITE_HANDLE_DATA_TAG
 {

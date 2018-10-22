@@ -22,6 +22,7 @@
 #include <azure_c_shared_utility/httpapiex.h>
 #include <azure_c_shared_utility/urlencode.h>
 #include <certs.h>
+#include "azure_c_shared_utility/platform_dep.h"
 
 #include "bos.h"
 #include "http_signer.h"

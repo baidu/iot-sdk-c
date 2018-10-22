@@ -22,6 +22,7 @@
 #include <azure_c_shared_utility/threadapi.h>
 #include "iothub_mqtt_client.h"
 #include "iothub_mqtt_client_sample.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 // Please set the mqtt client data and security which are shown as follow.
 // The endpoint address, witch is like "xxxxxx.mqtt.iot.xx.baidubce.com".

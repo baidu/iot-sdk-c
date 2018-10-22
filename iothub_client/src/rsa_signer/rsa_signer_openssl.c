@@ -22,6 +22,7 @@
 #include <openssl/err.h>
 #include "openssl/pem.h"
 #include "rsa_signer.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 int Base64Encode(const unsigned char* buffer, size_t length, char** b64text) { //Encodes a binary safe base 64 string
     BIO *bio, *b64;

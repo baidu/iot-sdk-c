@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include "azure_c_shared_utility/crt_abstractions.h"
 #include "iotdevice.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 DEFINE_ENUM_STRINGS(CODEFIRST_RESULT, CODEFIRST_RESULT_VALUES)
 DEFINE_ENUM_STRINGS(EXECUTE_COMMAND_RESULT, EXECUTE_COMMAND_RESULT_VALUES)

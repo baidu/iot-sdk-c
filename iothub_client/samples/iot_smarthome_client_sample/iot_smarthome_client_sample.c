@@ -25,6 +25,7 @@
 #include "iot_smarthome_client.h"
 #include "bos.h"
 #include "iot_smarthome_client_sample.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 // Should include serializer to operate shadow with device model.
 #include "serializer.h"

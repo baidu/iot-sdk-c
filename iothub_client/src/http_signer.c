@@ -22,6 +22,7 @@
 #include <azure_c_shared_utility/xlogging.h>
 #include <azure_c_shared_utility/hmacsha256.h>
 #include "http_signer.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 static const char httpApiRequestString[5][7] = {"GET", "POST", "PUT", "DELETE", "PATCH"};
 

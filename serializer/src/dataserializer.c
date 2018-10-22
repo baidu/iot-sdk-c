@@ -5,6 +5,7 @@
 
 #include "dataserializer.h"
 #include "azure_c_shared_utility/xlogging.h"
+#include "azure_c_shared_utility/platform_dep.h"
 
 DEFINE_ENUM_STRINGS(DATA_SERIALIZER_RESULT, DATA_SERIALIZER_RESULT_VALUES);
 
