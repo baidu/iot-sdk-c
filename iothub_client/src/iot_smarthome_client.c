@@ -1005,9 +1005,9 @@ int iot_smarthome_client_dowork(const IOT_SH_CLIENT_HANDLE handle)
     }
     if (handle->mqttClient->mqttClientStatus == MQTT_CLIENT_STATUS_CONNECTED && !(handle->subscribed))
     {
-        time_t current = time(NULL);
-        double elipsed = difftime(current, handle->subscribeSentTimestamp);
-        if (elipsed > 10) {
+        time_t current = get_time(NULL);
+        double elipsed = get_difftime(current, handle->subscribeSentTimestamp);
+        if (elipsed > 10 || handle->subscribeSentTimestamp == 0) {
             size_t topicSize = handle->isGateway == true ? SUB_TOPIC_SIZE * 2 : SUB_TOPIC_SIZE;
             char **topics =  (char **)malloc(sizeof(char *) * topicSize);
             int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, 0, handle->name);
