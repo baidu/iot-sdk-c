@@ -19,9 +19,9 @@
 
 #include <azure_c_shared_utility/xlogging.h>
 #include <azure_c_shared_utility/strings.h>
-#include <rsa_signer.h>
 #include "iot_smarthome_client.h"
 #include "iothub_mqtt_client.h"
+
 
 #define     SUB_TOPIC_SIZE                  9 /* including 2 for OTA Method */
 
@@ -42,7 +42,6 @@
 #define     PUB_GET                         "$baidu/iot/shadow/%s/get"
 #define     PUB_UPDATE                      "$baidu/iot/shadow/%s/update"
 #define     PUB_METHOD_CLOUD_REQ            "$baidu/iot/shadow/%s/method/cloud/req"
-#define     PUB_METHOD_DEVICE_RESP          "$baidu/iot/shadow/%s/method/device/resp"
 #define     GATEWAY_SUBDEVICE_PUB_OBJECT    "%s/subdevice/%s"
 
 #define     SUB_DELTA                       "$baidu/iot/shadow/%s/delta"
@@ -53,7 +52,7 @@
 #define     SUB_UPDATE_DOCUMENTS            "$baidu/iot/shadow/%s/update/documents"
 #define     SUB_UPDATE_SNAPSHOT             "$baidu/iot/shadow/%s/update/snapshot"
 #define     SUB_GATEWAY_WILDCARD            "%s/subdevice/+"
-#define     SUB_METHOD_RESP                 "$baidu/iot/shadow/%s/method/cloud/resp"
+#define     SUB_METHOD_RESP                 "$baidu/iot/shadow/%s/method/cloud/resp/+"
 #define     SUB_METHOD_REQ                  "$baidu/iot/shadow/%s/method/device/req"
 #define     KEY_CODE                        "code"
 #define     KEY_DESIRED                     "desired"
@@ -193,6 +192,7 @@ static int GetDeviceFromTopic(const char* topic, IOT_SH_CLIENT_HANDLE handle, SH
     char* prefix = TOPIC_PREFIX;
 
     size_t prefixLength = strlen(prefix);
+    printf("topic = %s\r\n",topic);
     if (false == StringCmp(prefix, topic, 0, prefixLength))
     {
         LogError("Failure: the topic prefix is illegal.");
@@ -316,7 +316,6 @@ static void ReleaseSubscription(char** subscribe, size_t length)
             subscribe[index] = NULL;
         }
     }
-    free(subscribe);
 }
 
 
@@ -446,16 +445,16 @@ static void OnRecvCallbackForSnapshot(const IOT_SH_CLIENT_HANDLE handle, const S
     (*(handle->callback.updateSnapshot))(msgContext, &shadow_snapshot, handle->context.updateSnapshot);
 }
 
-static int SendMethodResp(const IOT_SH_CLIENT_HANDLE handle, const SHADOW_MESSAGE_CONTEXT *msgContext, const char *methodName, JSON_Value *payload);
-
 static void OnRecvCallbackForMethodReq(const IOT_SH_CLIENT_HANDLE handle, const char *topic,
                                        const SHADOW_MESSAGE_CONTEXT *msgContext, const JSON_Object *root,
                                        const APP_PAYLOAD* payload)
 {
-    STRING_HANDLE message = STRING_from_byte_array(payload->message, payload->length);
+    char *message = malloc(payload->length + 1);
     if (message != NULL) {
-        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method request:\n%s\n%s", topic, STRING_c_str(message));
-        STRING_delete(message);
+        strncpy(message, payload->message, payload->length);
+        message[payload->length] = '\0';
+        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method request:\n%s\n%s", topic, message);
+        free(message);
     }
     else
     {
@@ -466,6 +465,7 @@ static void OnRecvCallbackForMethodReq(const IOT_SH_CLIENT_HANDLE handle, const 
     if (NULL == methodName) {
         LogError("Failure: methodName should not be NULL");
     } else {
+        double status = json_object_get_number(root, KEY_STATUS);
         JSON_Object* payload = json_object_get_object(root, KEY_PAYLOAD);
         if (strcmp(methodName, METHOD_DO_FIRMWARE_UPDATE) == 0)
         {
@@ -478,7 +478,6 @@ static void OnRecvCallbackForMethodReq(const IOT_SH_CLIENT_HANDLE handle, const 
                 otaJobInfo.firmwareVersion = json_object_get_string(payload, KEY_FIRMWARE_VERSION);
                 (*(handle->callback.otaJob))(msgContext, &otaJobInfo, handle->context.otaJob);
             }
-            SendMethodResp(handle, msgContext, methodName, NULL);
         }
         else
         {
@@ -491,10 +490,12 @@ static void OnRecvCallbackForMethodResp(const IOT_SH_CLIENT_HANDLE handle, const
                                         const SHADOW_MESSAGE_CONTEXT *msgContext, const JSON_Object *root,
                                         const APP_PAYLOAD* payload)
 {
-    STRING_HANDLE message = STRING_from_byte_array(payload->message, payload->length);
+    char *message = malloc(payload->length + 1);
     if (message != NULL) {
-        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method response:\n%s\n%s", topic, STRING_c_str(message));
-        STRING_delete(message);
+        strncpy(message, payload->message, payload->length);
+        message[payload->length] = '\0';
+        LOG(AZ_LOG_TRACE, LOG_LINE, "Received Method response:\n%s\n%s", topic, message);
+        free(message);
     }
     else
     {
@@ -596,21 +597,12 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
         return;
     }
 
-    STRING_HANDLE jsonData = STRING_from_byte_array(payload->message, payload->length);
-    if (jsonData == NULL)
-    {
-        LogError("Failure: failed to copy MQTT payload.");
-        free(msgContext.device);
-        return ;
-    }
-
-    JSON_Value* data = json_parse_string(STRING_c_str(jsonData));
+    JSON_Value* data = json_parse_string((char*) payload->message);
     if (NULL == data)
     {
         LogError("Failure: failed to deserialize the payload to json.");
         free(msgContext.device);
         free(msgContext.subdevice);
-        STRING_delete(jsonData);
         return;
     }
 
@@ -665,7 +657,6 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
         }
     }
 
-    STRING_delete(jsonData);
     free(msgContext.device);
     free(msgContext.subdevice);
     json_value_free(data);
@@ -684,12 +675,12 @@ static void InitIotHubClient(IOT_SH_CLIENT_HANDLE handle, const IOT_SH_CLIENT_OP
     mqttClientOptions.qualityOfServiceValue = DELIVER_AT_LEAST_ONCE;
 
     handle->mqttClient = initialize_mqtt_client_handle(
-        &mqttClientOptions,
-        handle->endpoint,
-        handle->mqttConnType,
-        OnRecvCallback,
-        IOTHUB_CLIENT_RETRY_EXPONENTIAL_BACKOFF_WITH_JITTER,
-        options->retryTimeoutInSeconds < 300 ? 300 : options->retryTimeoutInSeconds);
+            &mqttClientOptions,
+            handle->endpoint,
+            handle->mqttConnType,
+            OnRecvCallback,
+            IOTHUB_CLIENT_RETRY_EXPONENTIAL_BACKOFF_WITH_JITTER,
+            options->retryTimeoutInSeconds < 300 ? 300 : options->retryTimeoutInSeconds);
     handle->mqttClient->client_cert = options->client_cert;
     handle->mqttClient->client_key = options->client_key;
 }
@@ -698,6 +689,7 @@ static void ResetIotDmClient(IOT_SH_CLIENT_HANDLE handle)
 {
     if (NULL != handle)
     {
+        printf("subscribed=false in reset %d\r\n", __LINE__);
         handle->subscribed = false;
         handle->subscribeSentTimestamp = 0;
 
@@ -747,7 +739,7 @@ static int SendRequest(const IOT_SH_CLIENT_HANDLE handle, char* topic, JSON_Valu
         }
         else
         {
-            LOG(AZ_LOG_TRACE, LOG_LINE, "Sending request:\n%s\n%s", topic, encoded);
+            LOG(AZ_LOG_TRACE, LOG_LINE, "Sending Method request:\n%s\n%s", topic, encoded);
             result = publish_mqtt_message(handle->mqttClient, topic, DELIVER_AT_LEAST_ONCE, (uint8_t*)encoded, strlen(encoded), NULL, NULL);
             if (result != 0)
             {
@@ -851,32 +843,13 @@ static int SendMethodReq(const IOT_SH_CLIENT_HANDLE handle, const char *device, 
         json_object_set_value(root, KEY_PAYLOAD, payload);
     }
     char* topic = GenerateTopic(PUB_METHOD_CLOUD_REQ, device);
-
+    char* s = json_serialize_to_string(request);
+    if (s != NULL)
+    {
+        LOG(AZ_LOG_TRACE, LOG_LINE, "Sending method request:\n%s\n%s", topic, s);
+        json_free_serialized_string(s);
+    }
     return SendRequest(handle, topic, request);
-}
-
-/* Send a Method request to cloud */
-int SendMethodResp(const IOT_SH_CLIENT_HANDLE handle, const SHADOW_MESSAGE_CONTEXT *msgContext, const char *methodName, JSON_Value *payload) {
-    JSON_Value* response = json_value_init_object();
-    JSON_Object* root = json_object(response);
-    json_object_set_string(root, KEY_REQUEST_ID, msgContext->requestId);
-    json_object_set_string(root, KEY_METHOD_NAME, methodName);
-    if (payload != NULL) {
-        json_object_set_value(root, KEY_PAYLOAD, payload);
-    }
-    char* topic = NULL;
-    if (msgContext->subdevice != NULL)
-    {
-        char* pubObject = GenerateGatewaySubdevicePubObject(msgContext->device, msgContext->subdevice);
-        topic = GenerateTopic(PUB_METHOD_DEVICE_RESP, pubObject);
-        free(pubObject);
-    }
-    else
-    {
-        topic = GenerateTopic(PUB_METHOD_DEVICE_RESP, msgContext->device);
-    }
-
-    return SendRequest(handle, topic, response);
 }
 
 IOT_SH_CLIENT_HANDLE iot_smarthome_client_init(bool isGatewayDevice)
@@ -894,7 +867,7 @@ IOT_SH_CLIENT_HANDLE iot_smarthome_client_init(bool isGatewayDevice)
 
     handle->isGateway = isGatewayDevice;
 
-    handle->mqttConnType = MQTT_CONNECTION_MUTUAL_TLS;
+    handle->mqttConnType = MQTT_CONNECTION_TLS;
 
     return handle;
 }
@@ -903,7 +876,8 @@ void iot_smarthome_client_deinit(IOT_SH_CLIENT_HANDLE handle)
 {
     if (NULL != handle) {
         size_t topicSize = handle->isGateway == true ? SUB_TOPIC_SIZE * 2 : SUB_TOPIC_SIZE;
-        char ** topics =  (char **)malloc(sizeof(char *) * topicSize);
+        char * topics[topicSize];
+
 
         int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, 0, handle->name);
 
@@ -934,26 +908,32 @@ int iot_smarthome_client_connect(IOT_SH_CLIENT_HANDLE handle, const char* userna
                                  const char* client_cert, const char* client_key)
 {
     IOT_SH_CLIENT_OPTIONS options;
+	//the password is ?
+    unsigned char* output = 
     options.cleanSession = true;
     options.clientId = (char *) deviceId;
     options.username = (char *) username;
-    options.password = NULL;
-    options.keepAliveInterval = 10;
+	//mbedtls_md5(client_key, dna_strlen(client_key), output);	
+    options.password = output;
+    options.keepAliveInterval = 5;
     options.retryTimeoutInSeconds = 300;
-    options.client_cert = (char *) client_cert;
-    options.client_key = (char *) client_key;
+
+
+	printf("clientId :%s\r\n",deviceId);
+	printf("username :%s\r\n",username);
+	printf("MD5 :%s\r\n",output);
 
     if (NULL == handle)
     {
         LogError("IOT_SH_CLIENT_HANDLE handle should not be NULL.");
         return __FAILURE__;
     }
-    if ( NULL == options.username || NULL == options.client_cert || NULL == options.client_key )
+    if ( NULL == options.username || NULL == options.password)
     {
-        LogError("Failure: the username, cert, cert_key in options should not be NULL.");
+        LogError("Failure: the username, password in options should not be NULL.");
         return __FAILURE__;
     }
-
+	
     handle->name = options.clientId;
 
     InitIotHubClient(handle, &options);
@@ -1000,16 +980,19 @@ int iot_smarthome_client_dowork(const IOT_SH_CLIENT_HANDLE handle)
 
     if (handle->mqttClient->isConnectionLost)
     {
+        printf("subscribed=false because connectionLost %d\r\n", __LINE__);
         handle->subscribed = false;
         handle->subscribeSentTimestamp = 0;
     }
     if (handle->mqttClient->mqttClientStatus == MQTT_CLIENT_STATUS_CONNECTED && !(handle->subscribed))
     {
+        printf("sub again because subscribed = false %d\r\n", __LINE__);
         time_t current = get_time(NULL);
         double elipsed = get_difftime(current, handle->subscribeSentTimestamp);
         if (elipsed > 10 || handle->subscribeSentTimestamp == 0) {
+            printf("elapsed = %d\r\n", handle->subscribeSentTimestamp);
             size_t topicSize = handle->isGateway == true ? SUB_TOPIC_SIZE * 2 : SUB_TOPIC_SIZE;
-            char **topics =  (char **)malloc(sizeof(char *) * topicSize);
+            char *topics[topicSize];
             int amount = GetSubscription(handle, topics, SUB_TOPIC_SIZE, 0, handle->name);
             if (handle->isGateway == true) {
                 char *subObject = GenerateTopic(SUB_GATEWAY_WILDCARD, handle->name);
@@ -1020,13 +1003,12 @@ int iot_smarthome_client_dowork(const IOT_SH_CLIENT_HANDLE handle)
                 LogError("Failure: failed to get the subscribing topics.");
                 return __FAILURE__;
             } else if (amount > 0) {
-                SUBSCRIBE_PAYLOAD * subscribe = malloc(sizeof(SUBSCRIBE_PAYLOAD) * topicSize);
+                SUBSCRIBE_PAYLOAD subscribe[topicSize];
                 for (size_t index = 0; index < (size_t) amount; ++index) {
                     subscribe[index].subscribeTopic = topics[index];
                     subscribe[index].qosReturn = DELIVER_AT_LEAST_ONCE;
                 }
                 int result = subscribe_mqtt_topics(handle->mqttClient, subscribe, amount, OnSubAckCallback, handle);
-                free(subscribe);
                 ReleaseSubscription(topics, amount);
                 if (0 != result) {
                     LogError("Failure: failed to subscribe the topics.");
@@ -1237,10 +1219,10 @@ int iot_smarthome_client_ota_report_subdevice_result(const IOT_SH_CLIENT_HANDLE 
 }
 
 const char* computeSignature(unsigned char* data, const char* clientKey) {
-       return rsa_sha256_base64_signature(data, clientKey);
-    }
+    return "mock";
+}
 
 /* return 0 means verify ok */
 int verifySignature(unsigned char* data, const char* clientCert, const char* base64Signature) {
-    return verify_rsa_sha256_signature(data, clientCert, base64Signature);
+    return 0;
 }
