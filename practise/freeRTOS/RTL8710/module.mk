@@ -44,9 +44,9 @@ $(BAIDU_SRC)/iothub_client/src/iothub_client_persistence.c \
 \
 \
 $(BAIDU_SRC)/platform/agenttime.c \
-$(BAIDU_SRC)/platform/platform_mbed.c \
-$(BAIDU_SRC)/platform/threadapi_mbed.c \
-$(BAIDU_SRC)/platform/tickcounter_mbed.c \
+$(BAIDU_SRC)/platform/platform_freertos.c \
+$(BAIDU_SRC)/platform/threadapi_freertos.c \
+$(BAIDU_SRC)/platform/tickcounter_freertos.c \
 $(BAIDU_SRC)/platform/socketio_berkeley.c \
 $(BAIDU_SRC)/platform/tlsio_mbedtls.c \
 $(BAIDU_SRC)/platform/iot_smarthome_client.c \
