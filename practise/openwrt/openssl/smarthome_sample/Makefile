@@ -1,8 +1,10 @@
 CFLAGS = -g -O2 -std=gnu99
 DFLAGS = -DUSE_OPENSSL
+
 # modify openssl lib dir path on your system
-LDFLAGS =  -L/path/to/your/openssl/install/lib -lssl -lcrypto 
-LDFLAGS +=  -lm -lpthread -lrt -ldl 
+LDFLAGS =  -L/path/to/your/openssl/install/lib -lssl -lcrypto
+LDFLAGS +=  -lm -lrt -lpthread -ldl 
+
 TARGET := iot_smarthome_sample_test
 
 # modify to your cross-compiler name if your are cross-compiling
@@ -24,55 +26,69 @@ vecho := @echo
 endif
 
 # modify openssl include dir path on your system
-INC = -I/path/to/your/openssl/install/include \
+INC = -I/path/to/your/openssl/include/dir \
 -I$(EDGE_SDK_DIR)/c-utility/inc  \
 -I$(EDGE_SDK_DIR)/c-utility/inc/azure_c_shared_utility \
 -I$(EDGE_SDK_DIR)/iothub_client/inc \
 -I$(EDGE_SDK_DIR)/umqtt/inc  \
--I$(EDGE_SDK_DIR)/umqtt/inc/azure_umqtt_c  \
--I$(EDGE_SDK_DIR)/parson  \
--I$(EDGE_SDK_DIR)/certs      \
+-I$(EDGE_SDK_DIR)/umqtt/inc/azure_umqtt_c 	\
+-I$(EDGE_SDK_DIR)/c-utility/pal/generic \
+-I$(EDGE_SDK_DIR)/certs \
 -I$(EDGE_SDK_DIR)/c-utility/pal/inc \
+-I$(EDGE_SDK_DIR)/parson \
 -I$(EDGE_SDK_DIR)/serializer/inc \
--I$(EDGE_SDK_DIR)/c-utility/pal/linux \
--I$(EDGE_SDK_DIR)/iothub_client/samples/iot_smarthome_client_sample \
+-I$(EDGE_SDK_DIR)/iothub_client/samples/iot_smarthome_client_sample
 
 
 SOURCES = \
 $(EDGE_SDK_DIR)/c-utility/src/xlogging.c \
 $(EDGE_SDK_DIR)/c-utility/src/buffer.c \
 $(EDGE_SDK_DIR)/c-utility/src/consolelogger.c \
-$(EDGE_SDK_DIR)/c-utility/src/constbuffer.c \
-$(EDGE_SDK_DIR)/c-utility/src/constmap.c \
 $(EDGE_SDK_DIR)/c-utility/src/crt_abstractions.c \
 $(EDGE_SDK_DIR)/c-utility/src/doublylinkedlist.c \
-$(EDGE_SDK_DIR)/c-utility/src/gballoc.c \
-$(EDGE_SDK_DIR)/c-utility/src/gb_stdio.c \
-$(EDGE_SDK_DIR)/c-utility/src/gb_time.c \
 $(EDGE_SDK_DIR)/c-utility/src/utf8_checker.c \
 $(EDGE_SDK_DIR)/c-utility/src/hmac.c \
 $(EDGE_SDK_DIR)/c-utility/src/hmacsha256.c \
-$(EDGE_SDK_DIR)/c-utility/src/httpheaders.c \
-$(EDGE_SDK_DIR)/c-utility/src/map.c \
-$(EDGE_SDK_DIR)/c-utility/src/optionhandler.c \
-$(EDGE_SDK_DIR)/c-utility/src/sastoken.c \
+$(EDGE_SDK_DIR)/c-utility/src/usha.c \
 $(EDGE_SDK_DIR)/c-utility/src/sha1.c \
 $(EDGE_SDK_DIR)/c-utility/src/sha224.c \
 $(EDGE_SDK_DIR)/c-utility/src/sha384-512.c \
-$(EDGE_SDK_DIR)/c-utility/src/strings.c \
-$(EDGE_SDK_DIR)/c-utility/src/string_tokenizer.c \
 $(EDGE_SDK_DIR)/c-utility/src/urlencode.c \
-$(EDGE_SDK_DIR)/c-utility/src/usha.c \
+$(EDGE_SDK_DIR)/c-utility/src/sastoken.c \
+$(EDGE_SDK_DIR)/c-utility/src/base64.c \
+$(EDGE_SDK_DIR)/c-utility/src/httpheaders.c \
+$(EDGE_SDK_DIR)/c-utility/src/map.c \
+$(EDGE_SDK_DIR)/c-utility/src/optionhandler.c \
+$(EDGE_SDK_DIR)/c-utility/src/strings.c \
 $(EDGE_SDK_DIR)/c-utility/src/vector.c \
 $(EDGE_SDK_DIR)/c-utility/src/xio.c \
-$(EDGE_SDK_DIR)/c-utility/src/base64.c \
 $(EDGE_SDK_DIR)/c-utility/src/singlylinkedlist.c \
+$(EDGE_SDK_DIR)/serializer/src/agenttypesystem.o \
+$(EDGE_SDK_DIR)/serializer/src/codefirst.o \
+$(EDGE_SDK_DIR)/serializer/src/commanddecoder.o \
+$(EDGE_SDK_DIR)/serializer/src/datamarshaller.o \
+$(EDGE_SDK_DIR)/serializer/src/datapublisher.o \
+$(EDGE_SDK_DIR)/serializer/src/dataserializer.o \
+$(EDGE_SDK_DIR)/serializer/src/iotdevice.o \
+$(EDGE_SDK_DIR)/serializer/src/jsondecoder.o \
+$(EDGE_SDK_DIR)/serializer/src/jsonencoder.o \
+$(EDGE_SDK_DIR)/serializer/src/methodreturn.o \
+$(EDGE_SDK_DIR)/serializer/src/multitree.o \
+$(EDGE_SDK_DIR)/serializer/src/schema.o \
+$(EDGE_SDK_DIR)/serializer/src/schemalib.o \
+$(EDGE_SDK_DIR)/serializer/src/schemaserializer.o \
+$(EDGE_SDK_DIR)/c-utility/src/httpapiex.c \
+$(EDGE_SDK_DIR)/c-utility/src/httpapiexsas.c \
+$(EDGE_SDK_DIR)/certs/certs.c \
+$(EDGE_SDK_DIR)/c-utility/adapters/httpapi_compact.c \
 \
 \
+$(EDGE_SDK_DIR)/iothub_client/src/bos.c \
+$(EDGE_SDK_DIR)/iothub_client/src/rsa_signer/rsa_signer_openssl.c \
+$(EDGE_SDK_DIR)/iothub_client/src/http_signer.c \
+$(EDGE_SDK_DIR)/iothub_client/src/iot_smarthome_client.c \
 $(EDGE_SDK_DIR)/iothub_client/src/iothub_client_persistence.c \
-$(EDGE_SDK_DIR)/iothub_client/src/iothub_client_retry_control.c \
 $(EDGE_SDK_DIR)/iothub_client/src/iothub_mqtt_client.c \
-$(EDGE_SDK_DIR)/iothub_client/src/version.c \
 \
 \
 $(EDGE_SDK_DIR)/umqtt/src/mqtt_client.c \
@@ -80,11 +96,9 @@ $(EDGE_SDK_DIR)/umqtt/src/mqtt_codec.c \
 $(EDGE_SDK_DIR)/umqtt/src/mqtt_message.c \
 \
 \
-\
 $(EDGE_SDK_DIR)/c-utility/adapters/agenttime.c \
 $(EDGE_SDK_DIR)/c-utility/adapters/threadapi_pthreads.c \
 $(EDGE_SDK_DIR)/c-utility/adapters/tickcounter_linux.c \
-$(EDGE_SDK_DIR)/c-utility/pal/dns_async.c \
 $(EDGE_SDK_DIR)/c-utility/adapters/socketio_berkeley.c \
 $(EDGE_SDK_DIR)/c-utility/adapters/lock_pthreads.c \
 $(EDGE_SDK_DIR)/c-utility/adapters/linux_time.c \
@@ -94,29 +108,6 @@ $(EDGE_SDK_DIR)/c-utility/src/x509_openssl.c \
 $(EDGE_SDK_DIR)/c-utility/pal/tlsio_options.c \
 $(EDGE_SDK_DIR)/parson/parson.c \
 \
-$(EDGE_SDK_DIR)/serializer/src/agenttypesystem.c \
-$(EDGE_SDK_DIR)/serializer/src/codefirst.c \
-$(EDGE_SDK_DIR)/serializer/src/commanddecoder.c \
-$(EDGE_SDK_DIR)/serializer/src/datamarshaller.c \
-$(EDGE_SDK_DIR)/serializer/src/datapublisher.c \
-$(EDGE_SDK_DIR)/serializer/src/dataserializer.c \
-$(EDGE_SDK_DIR)/serializer/src/iotdevice.c \
-$(EDGE_SDK_DIR)/serializer/src/jsondecoder.c \
-$(EDGE_SDK_DIR)/serializer/src/jsonencoder.c \
-$(EDGE_SDK_DIR)/serializer/src/methodreturn.c \
-$(EDGE_SDK_DIR)/serializer/src/multitree.c \
-$(EDGE_SDK_DIR)/serializer/src/schema.c \
-$(EDGE_SDK_DIR)/serializer/src/schemalib.c \
-$(EDGE_SDK_DIR)/serializer/src/schemaserializer.c \
-\
-$(EDGE_SDK_DIR)/iothub_client/src/bos.c \
-$(EDGE_SDK_DIR)/iothub_client/src/iot_smarthome_client.c \
-$(EDGE_SDK_DIR)/iothub_client/src/http_signer.c \
-$(EDGE_SDK_DIR)/c-utility/src/httpapiex.c \
-$(EDGE_SDK_DIR)/c-utility/src/httpapiexsas.c \
-$(EDGE_SDK_DIR)/certs/certs.c \
-$(EDGE_SDK_DIR)/iothub_client/src/rsa_signer/rsa_signer_openssl.c \
-$(EDGE_SDK_DIR)/c-utility/adapters/httpapi_compact.c \
 $(EDGE_SDK_DIR)/iothub_client/samples/iot_smarthome_client_sample/iot_smarthome_client_sample.c \
 ./main.c
 
