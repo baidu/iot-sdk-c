@@ -673,6 +673,7 @@ static void OnRecvCallback(MQTT_MESSAGE_HANDLE msgHandle, void* context)
 
 static void InitIotHubClient(IOT_SH_CLIENT_HANDLE handle, const IOT_SH_CLIENT_OPTIONS* options) {
     MQTT_CLIENT_OPTIONS mqttClientOptions;
+    memset(&mqttClientOptions, 0, sizeof(MQTT_CLIENT_OPTIONS));
     mqttClientOptions.clientId = options->clientId == NULL ? handle->name : options->clientId;
     mqttClientOptions.willTopic = NULL;
     mqttClientOptions.willMessage = NULL;
