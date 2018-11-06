@@ -927,19 +927,22 @@ static int SendMqttConnectMessage(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient)
 {
     int result = 0;
 
-    switch (iotHubClient->connType)
-    {
-        case MQTT_CONNECTION_TCP:
-            iotHubClient->xioTransport = CreateTcpConnection(iotHubClient->endpoint);
-            break;
-        case MQTT_CONNECTION_TLS:
-            iotHubClient->xioTransport = CreateTlsConnection(iotHubClient->endpoint);
-            break;
-        case MQTT_CONNECTION_MUTUAL_TLS:
-            iotHubClient->xioTransport = CreateMutualTlsConnection(iotHubClient->endpoint,
-                                                                   iotHubClient->client_cert,
-                                                                   iotHubClient->client_key);
-    }
+	if (!iotHubClient->xioTransport) 
+	{
+		switch (iotHubClient->connType)
+		{
+			case MQTT_CONNECTION_TCP:
+				iotHubClient->xioTransport = CreateTcpConnection(iotHubClient->endpoint);
+				break;
+			case MQTT_CONNECTION_TLS:
+				iotHubClient->xioTransport = CreateTlsConnection(iotHubClient->endpoint);
+				break;
+			case MQTT_CONNECTION_MUTUAL_TLS:
+				iotHubClient->xioTransport = CreateMutualTlsConnection(iotHubClient->endpoint,
+																	   iotHubClient->client_cert,
+																	   iotHubClient->client_key);
+		}
+	}
 
     if (iotHubClient->xioTransport == NULL)
     {
@@ -1079,6 +1082,7 @@ int initialize_mqtt_connection(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient)
             {
                 if (iotHubClient->isConnectionLost && iotHubClient->isRecoverableError) {
                     xio_destroy(iotHubClient->xioTransport);
+                    iotHubClient->xioTransport = NULL;
                     mqtt_client_deinit(iotHubClient->mqttClient);
                     iotHubClient->mqttClient = mqtt_client_init(iotHubClient->recvCallback, OnMqttOperationComplete,
                                                                 iotHubClient, OnMqttErrorComplete, iotHubClient);
@@ -1111,7 +1115,7 @@ int initialize_mqtt_connection(IOTHUB_MQTT_CLIENT_HANDLE iotHubClient)
             {
                 LogError("mqtt_client timed out waiting for CONNACK");
                 DisconnectFromClient(iotHubClient);
-                result = 0;
+                result = __FAILURE__;
             }
         }
         else if (iotHubClient->mqttClientStatus == MQTT_CLIENT_STATUS_CONNECTED)
