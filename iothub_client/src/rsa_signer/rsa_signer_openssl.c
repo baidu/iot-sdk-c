@@ -211,6 +211,7 @@ int verify_rsa_sha256_signature(unsigned char* data, const char* pemCert, const 
         EVP_PKEY_free (pkey);
         EVP_MD_CTX_cleanup(&md_ctx);
         BIO_free(cert_memory_bio);
+        X509_free(x509);
         return -1;
     }
 
@@ -219,6 +220,7 @@ int verify_rsa_sha256_signature(unsigned char* data, const char* pemCert, const 
     EVP_PKEY_free (pkey);
     EVP_MD_CTX_cleanup(&md_ctx);
     BIO_free(cert_memory_bio);
+    X509_free(x509);
 
     if (err != 1) {
         ERR_print_errors_fp (stderr);
