@@ -2,8 +2,8 @@ CFLAGS = -g -O2 -std=gnu99
 DFLAGS = -DUSE_MBED_TLS
 
 # set these variables to mbedtls lib/include dir path on your system
-MBED_LIB_DIR = 
-MBED_INC_DIR = 
+MBED_LIB_DIR = .
+MBED_INC_DIR = .
 
 LDFLAGS =  -L$(MBED_LIB_DIR) -lmbedtls -lmbedcrypto -lmbedx509
 LDFLAGS +=  -lm -lpthread -lrt -ldl 
