@@ -2,8 +2,8 @@ CFLAGS = -g -O2 -std=gnu99
 DFLAGS = -DUSE_OPENSSL
 
 # set these variables to openssl lib/include dir path on your system
-OPENSSL_LIB_DIR = 
-OPENSSL_INC_DIR = 
+OPENSSL_LIB_DIR = .
+OPENSSL_INC_DIR = .
 
 LDFLAGS =  -L$(OPENSSL_LIB_DIR) -lssl -lcrypto
 LDFLAGS +=  -lm -lrt -lpthread -ldl 
