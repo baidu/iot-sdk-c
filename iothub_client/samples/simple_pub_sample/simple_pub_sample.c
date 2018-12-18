@@ -113,8 +113,8 @@ int simple_pub_sample_run(
     {
         MQTT_CLIENT_OPTIONS options = { 0 };
         options.clientId = (char*) clientid;
-        options.willMessage = "NULL";   // set this to some string, otherwise, it crashes during option cloning
-        options.willTopic = "NULL"; // set this to some string, otherwise, it crashes during option cloning
+        options.willMessage = NULL;
+        options.willTopic = NULL;
         options.username = (char*) username;
         options.password = (char*) password;
         options.keepAliveInterval = 10;
