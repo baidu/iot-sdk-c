@@ -3,7 +3,7 @@
 #
 
 # Component configuration in preprocessor defines
-#CFLAGS += -DESP8266_SOC_RTC
+CFLAGS += -DESP8266_SOC_RTC
 CFLAGS += -DUSE_MBED_TLS
 CFLAGS += -Wno-error=char-subscripts
 CFLAGS += -Wno-error=enum-compare
@@ -13,8 +13,8 @@ CFLAGS += -Wno-error=format=
 
 
 
-EDGE_SDK_PATH = ../../../../../../iot-edge-c-sdk
-ESP_PAL_PATH = ../pal/
+EDGE_SDK_PATH = ../../../../../../../iot-edge-c-sdk
+ESP_PAL_PATH = ../../../smarthome_demo/components/pal/
 
 COMPONENT_ADD_INCLUDEDIRS :=  \
 $(ESP_PAL_PATH)/inc \
@@ -27,8 +27,7 @@ $(EDGE_SDK_PATH)/c-utility/pal/generic \
 $(EDGE_SDK_PATH)/certs \
 $(EDGE_SDK_PATH)/c-utility/pal/inc \
 $(EDGE_SDK_PATH)/parson \
-$(EDGE_SDK_PATH)/serializer/inc \
-$(EDGE_SDK_PATH)/iothub_client/samples/iot_smarthome_client_sample
+$(EDGE_SDK_PATH)/serializer/inc
 
 COMPONENT_OBJS =  \
 $(EDGE_SDK_PATH)/c-utility/src/xlogging.o	\
@@ -67,8 +66,8 @@ $(EDGE_SDK_PATH)/c-utility/adapters/httpapi_compact.o \
 \
 \
 $(EDGE_SDK_PATH)/iothub_client/src/iothub_client_persistence.o	\
+$(EDGE_SDK_PATH)/iothub_client/src/iotdm_client.o	\
 $(EDGE_SDK_PATH)/iothub_client/src/iothub_mqtt_client.o	\
-$(EDGE_SDK_PATH)/iothub_client/src/iot_smarthome_client.o \
 \
 \
 $(EDGE_SDK_PATH)/umqtt/src/mqtt_client.o	\
@@ -88,7 +87,6 @@ $(EDGE_SDK_PATH)/certs/certs.o \
 $(EDGE_SDK_PATH)/c-utility/pal/tlsio_options.o \
 \
 \
-$(EDGE_SDK_PATH)/iothub_client/samples/iot_smarthome_client_sample/iot_smarthome_client_sample.o	\
 \
 
 
@@ -97,7 +95,6 @@ $(EDGE_SDK_PATH)/c-utility/src \
 $(EDGE_SDK_PATH)/c-utility/adapters  \
 $(EDGE_SDK_PATH)/umqtt/src	\
 $(EDGE_SDK_PATH)/iothub_client/src  \
-$(EDGE_SDK_PATH)/iothub_client/samples/iot_smarthome_client_sample  \
 $(EDGE_SDK_PATH)/certs \
 $(EDGE_SDK_PATH)/umqtt/deps/c-utility/pal/freertos \
 $(EDGE_SDK_PATH)/c-utility/pal/lwip \

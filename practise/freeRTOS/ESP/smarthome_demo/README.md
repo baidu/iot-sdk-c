@@ -12,7 +12,7 @@
 - export PATH=加入esp8266 toolchain 路径
 - ```make menuconfig```配置串口和 wifi 信息,同时配置`CONFIG_MBEDTLS_SSL_MAX_CONTENT_LEN`，其路径为```-> Component config-> SSL-> mbedTLS```设置其值为`6144`，保存退出。
 - 默认情况下，esp8266不支持浮点数打印为了节省栈空间，但是在`iot-edge-c-sdk`中的JSON解析库`parson`中会使用对浮点数的计算和打印输出(例如，`strtod``sprintf`)，为此，从ESP8266_RTOS_SDK 3.0开始，可以配置 newlib 为 normal 模式从而支持浮点。其路径为```-> Component config-> Newlib -> [*] Enable newlib -> newlib level (nano)```这里改成`normal`即可。
-- 修改`component.mk`中加入```CFLAGS += -DESP8266_SOC_RTC```
+- 修改iot-edge-c-sdk的`component.mk`中加入```CFLAGS += -DESP8266_SOC_RTC```
 - make flash monitor
 
 # 证书信息配置
