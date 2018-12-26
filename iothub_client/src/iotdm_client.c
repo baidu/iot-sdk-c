@@ -20,6 +20,7 @@
 #include <azure_c_shared_utility/xlogging.h>
 #include <azure_c_shared_utility/uuid.h>
 #include <azure_c_shared_utility/strings.h>
+#include <azure_c_shared_utility/threadapi.h>
 #include "iotdm_client.h"
 #include "iothub_mqtt_client.h"
 
@@ -1056,6 +1057,7 @@ int iotdm_client_connect(IOTDM_CLIENT_HANDLE handle, const IOTDM_CLIENT_OPTIONS 
     do
     {
         iothub_mqtt_dowork(handle->mqttClient);
+        ThreadAPI_Sleep(10);
     } while (MQTT_CLIENT_STATUS_CONNECTED != handle->mqttClient->mqttClientStatus && handle->mqttClient->isRecoverableError);
 
     handle->mqttClient->isDestroyCalled = false;
