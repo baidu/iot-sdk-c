@@ -1835,13 +1835,13 @@ AGENT_DATA_TYPES_RESULT AgentDataTypes_ToString(STRING_HANDLE destination, const
 
                 for (i = 0; i < vlen; i++)
                 {
-                    if ((unsigned char)v[i] >= 128) /*this be a UNICODE character begin*/
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        if (v[i] <= 0x1F)
+                    //if ((unsigned char)v[i] >= 128) /*this be a UNICODE character begin*/
+                    //{
+                    //    break;
+                    //}
+                    //else
+                    //{
+                        if ((unsigned char)v[i] <= 0x1F)
                         {
                             nControlCharacters++;
                         }
@@ -1853,7 +1853,7 @@ AGENT_DATA_TYPES_RESULT AgentDataTypes_ToString(STRING_HANDLE destination, const
                         {
                             nEscapeCharacters++;
                         }
-                    }
+                    //}
                 }
 
                 if (i < vlen)
@@ -1877,7 +1877,7 @@ AGENT_DATA_TYPES_RESULT AgentDataTypes_ToString(STRING_HANDLE destination, const
                         tempBuffer[w++] = '"';
                         for (i = 0; i < vlen; i++)
                         {
-                            if (v[i] <= 0x1F)
+                            if ((unsigned char)v[i] <= 0x1F)
                             {
                                 tempBuffer[w++] = '\\';
                                 tempBuffer[w++] = 'u';
@@ -2464,7 +2464,7 @@ AGENT_DATA_TYPES_RESULT Create_AGENT_DATA_TYPE_from_AGENT_DATA_TYPE(AGENT_DATA_T
                 break;
             }
             case(EDM_DOUBLE_TYPE) :
-            {                
+            {
                 dest->type = src->type;
                 dest->value.edmDouble = src->value.edmDouble;
                 result = AGENT_DATA_TYPES_OK;
