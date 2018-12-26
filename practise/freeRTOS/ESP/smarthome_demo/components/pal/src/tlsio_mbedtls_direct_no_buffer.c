@@ -763,6 +763,11 @@ void tlsio_mbedtls_destroy(CONCRETE_IO_HANDLE tls_io)
             //free(tls_io_instance->x509privatekey);
             tls_io_instance->x509privatekey = NULL;
         }
+        if(tls_io_instance->hostname != NULL)
+        {
+            free(tls_io_instance->hostname);
+            tls_io_instance->hostname = NULL;
+        }
         
         free(tls_io);
     }
