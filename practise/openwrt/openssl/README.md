@@ -10,14 +10,14 @@
 ## 关于openssl在linux下的编译安装  
 以下交叉编译的步骤：
 
-- 从网上下载最新的源码。**注意：0.9.8, 1.0.0 和 1.0.1版本官方已经不再支持，请避免使用！**
+- 从网上下载最新的源码。**注意：0.9.8, 1.0.0 和 1.0.1版本官方已经不再支持，请避免使用！请下载1.0.2x的最新版本！**
 ```
-wget https://www.openssl.org/source/openssl-1.1.0i.tar.gz
+wget https://www.openssl.org/source/openssl-1.0.2q.tar.gz
 ```
 - 解压，配置。( --prefix )参数为欲安装之目录
 ```
-tar -xzf openssl-1.1.0i.tar.gz
-cd openssl-1.1.0i
+tar -xzf openssl-1.0.2q.tar.gz
+cd openssl-1.0.2q
 mkdir install
 ./config no-asm shared --prefix=`pwd`/install
 ```
