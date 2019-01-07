@@ -136,7 +136,6 @@ endif
 # modify openssl include dir path on your system
 INC = -I/path/to/your/openssl/install/include \   # 修改这一路径为你编译安装后的头文件所在目录
 -I$(EDGE_SDK_DIR)/c-utility/inc  \
--I$(EDGE_SDK_DIR)/c-utility/inc/azure_c_shared_utility \
 -I$(EDGE_SDK_DIR)/iothub_client/inc \
 ......
 ```

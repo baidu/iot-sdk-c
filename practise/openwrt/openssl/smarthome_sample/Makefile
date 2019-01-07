@@ -31,7 +31,6 @@ endif
 # modify openssl include dir path on your system
 INC = -I$(OPENSSL_INC_DIR) \
 -I$(EDGE_SDK_DIR)/c-utility/inc  \
--I$(EDGE_SDK_DIR)/c-utility/inc/azure_c_shared_utility \
 -I$(EDGE_SDK_DIR)/iothub_client/inc \
 -I$(EDGE_SDK_DIR)/umqtt/inc  \
 -I$(EDGE_SDK_DIR)/umqtt/inc/azure_umqtt_c 	\
