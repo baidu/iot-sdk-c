@@ -18,14 +18,14 @@ sudo apt-get install libcurl4-openssl-dev
 ```
 这里讲一下源代码安装的方式。  
 
-- 从网上下载最新的源码。**注意：0.9.8, 1.0.0 和 1.0.1版本官方已经不再支持，请避免使用！**
+- 从网上下载最新的源码。**注意：0.9.8, 1.0.0 和 1.0.1版本官方已经不再支持，请避免使用！请下载1.0.2x的最新版本！**
 ```
-wget https://www.openssl.org/source/openssl-1.1.0i.tar.gz
+wget https://www.openssl.org/source/openssl-1.0.2q.tar.gz
 ```
 - 解压，编译，安装。
 ```
-tar -xzf openssl-1.1.0i.tar.gz
-cd openssl-1.1.0i
+tar -xzf openssl-1.0.2q.tar.gz
+cd openssl-1.0.2q
 mkdir install
 ./config shared --prefix=`pwd`/install       # shared选项表示生成动态库，--prefix 参数为欲安装之目录
 make
@@ -136,7 +136,6 @@ endif
 # modify openssl include dir path on your system
 INC = -I/path/to/your/openssl/install/include \   # 修改这一路径为你编译安装后的头文件所在目录
 -I$(EDGE_SDK_DIR)/c-utility/inc  \
--I$(EDGE_SDK_DIR)/c-utility/inc/azure_c_shared_utility \
 -I$(EDGE_SDK_DIR)/iothub_client/inc \
 ......
 ```

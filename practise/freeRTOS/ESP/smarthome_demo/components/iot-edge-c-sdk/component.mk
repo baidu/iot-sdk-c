@@ -19,7 +19,6 @@ ESP_PAL_PATH = ../pal/
 COMPONENT_ADD_INCLUDEDIRS :=  \
 $(ESP_PAL_PATH)/inc \
 $(EDGE_SDK_PATH)/c-utility/inc  \
-$(EDGE_SDK_PATH)/c-utility/inc/azure_c_shared_utility \
 $(EDGE_SDK_PATH)/iothub_client/inc \
 $(EDGE_SDK_PATH)/umqtt/inc  \
 $(EDGE_SDK_PATH)/umqtt/inc/azure_umqtt_c 	\
