@@ -9,7 +9,7 @@ working_dir=$PWD
 package_dir="package"
 
 iot_dir="iot-edge-c-sdk"
-iot_repo="ssh://huyun03@icode.baidu.com:8235/baidu/bce-iot/iot-edge-c-sdk"
+iot_repo="https://github.com/baidu/iot-edge-c-sdk.git"
 iot_makefile="Makefile.iot"
 
 usage ()
