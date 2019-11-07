@@ -1,0 +1,6 @@
+[submodule "deps/azure-ctest"]
+	path = deps/ctest
+	url = https://github.com/Azure/azure-ctest.git
+[submodule "deps/testrunner"]
+	path = deps/testrunner
+	url = https://github.com/Azure/azure-c-testrunnerswitcher.git
