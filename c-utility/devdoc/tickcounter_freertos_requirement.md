@@ -1,24 +1,24 @@
 tickcounter_freertos
 =========
 
-## Overview
+## 简介
 
-tickcounter_freertos implements the Azure IoT C Shared Utility tickcounter adapter for devices running FreeRTOS.
+tickcounter_freertos实现了Baidu IoT C Shared Utility库中的tickcounter适配器接口。该文件可以用在运行FreeRTOS的系统中。
 
-FreeRTOS tick counting is provided by the FreeRTOS call `xTaskGetTickCount`, which requires the FreeRTOS call `vTaskStartScheduler` to be called beforehand. The call to `vTaskStartScheduler` happens during initialization for any realistic FreeRTOS application, so further system initialization in the tickcounter_freertos adapter is not required.
+FreeRTOS tick计数功能是通过FreeRTOS系统调用`xTaskGetTickCount`来实现的。因此，需要在此之前已经调用过了`vTaskStartScheduler`。`vTaskStartScheduler` 调用一般发生在FreeRTOS系统初始化的时候。所以在tickcounter_freertos适配器中无需再次调用该函数进行系统初始化了。
 
-FreeRTOS can be configured to use 16-bit ticks by setting the configUSE_16_BIT_TICKS value to '0'. This could lead to incorrect behavior due to overflow in some situations, so use caution when employing 16-bit ticks.  
-
-
-## References
-[Azure IoT C Shared Utility tickcounter adapter](https://github.com/Azure/azure-c-shared-utility/blob/master/doc/porting_guide.md#tickcounter-adapter)  
-[tickcounter.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/tickcounter.h)
+FreeRTOS可以通过设置`configUSE_16_BIT_TICKS`变量为0，来配置16位的时钟tick。但是在某些情况下容易导致时钟tick溢出，造成程序异常，所以请谨慎使用这样的配置。  
 
 
+## 引用
+[Baidu IoT C Shared Utility tickcounter 适配器](../../PortingGuide.md#tickcounter适配器)  
+[tickcounter.h](../../c-utility/inc/azure_c_shared_utility/tickcounter.h)
 
-## Exposed API
 
-**SRS_TICKCOUNTER_FREERTOS_30_001: [** The tickcounter_freertos adapter shall use the following data types as defined in tickcounter.h.
+
+## 暴露的 API
+
+**SRS_TICKCOUNTER_FREERTOS_30_001: [** tickcounter_freertos 适配器需要使用以下定义在tickcounter.h的数据类型：
 ```c
 // uint_fast32_t is a 32 bit uint
 typedef uint_fast32_t tickcounter_ms_t;
@@ -27,7 +27,7 @@ typedef struct TICK_COUNTER_INSTANCE_TAG* TICK_COUNTER_HANDLE;
 ```
  **]**  
 
-**SRS_TICKCOUNTER_FREERTOS_30_002: [** The tickcounter_freertos adapter shall implement the API calls defined in tickcounter.h:
+**SRS_TICKCOUNTER_FREERTOS_30_002: [** The tickcounter_freertos 适配器需要实现以下定义在tickcounter.h中的API接口：
 ```c
 TICK_COUNTER_HANDLE tickcounter_create(void);
 void tickcounter_destroy(TICK_COUNTER_HANDLE tick_counter);
@@ -37,37 +37,22 @@ int tickcounter_get_current_ms(TICK_COUNTER_HANDLE tick_counter, tickcounter_ms_
 
 
 ###   tickcounter_create
-The `tickcounter_create` call allocates and initializes an internally defined TICK_COUNTER_INSTANCE structure and returns its pointer as type TICK_COUNTER_HANDLE.
+`tickcounter_create`函数用来分配、初始化一个内部的`TICK_COUNTER_INSTANCE`结构体，并且返回它的指针对象`TICK_COUNTER_HANDLE`。通过判断该指针是否为`NULL`来判断是否创建成功。
 ```c
 TICK_COUNTER_HANDLE tickcounter_create(void);
 ```
 
-**SRS_TICKCOUNTER_FREERTOS_30_003: [** `tickcounter_create` shall allocate and initialize an internally-defined TICK_COUNTER_INSTANCE structure and return its pointer on success. **]**
-
-**SRS_TICKCOUNTER_FREERTOS_30_004: [** If allocation of the internally-defined TICK_COUNTER_INSTANCE structure fails,  `tickcounter_create` shall return NULL. (Initialization failure is not possible for FreeRTOS.) **]**  
-
 
 ###   tickcounter_destroy
-The `tickcounter_destroy` call releases all resources acquired by the `tickcounter_create` call.
+`tickcounter_destroy`函数会释放`tickcounter_create`创建的所有资源。如果`tick_counter`为NULL，该函数将什么都不做。
 ```c
 void tickcounter_destroy(TICK_COUNTER_HANDLE tick_counter);
 ```
 
-**SRS_TICKCOUNTER_FREERTOS_30_005: [** `tickcounter_destroy` shall delete the internally-defined TICK_COUNTER_INSTANCE structure specified by the `tick_counter` parameter. (This call has no failure case.) **]**
-
-**SRS_TICKCOUNTER_FREERTOS_30_006: [** If the `tick_counter` parameter is NULL, `tickcounter_destroy` shall do nothing. **]**  
-
-
 ###   tickcounter_get_current_ms
-The `tickcounter_get_current_ms` call returns the number of milleconds elapsed since the `tickcounter_create` call.
+`tickcounter_get_current_ms`会返回自`tickcounter_create`调用以来经过的时钟毫秒数。    
+如果`tick_counter``current_ms`任一为NULL，该函数将返回一个非零值代表出错。如果正常调用，该函数会设置`*current_ms`为自`tickcounter_create`调用以来经过的时钟毫秒数。同时返回 0 表示成功。
 ```c
 int tickcounter_get_current_ms(TICK_COUNTER_HANDLE tick_counter, tickcounter_ms_t* current_ms);
 ```
 
-**SRS_TICKCOUNTER_FREERTOS_30_007: [** If the `tick_counter` parameter is NULL, `tickcounter_get_current_ms` shall return a non-zero value to indicate error. **]**
-
-**SRS_TICKCOUNTER_FREERTOS_30_008: [** If the `current_ms` parameter is NULL, `tickcounter_get_current_ms` shall return a non-zero value to indicate error. **]**
-
-**SRS_TICKCOUNTER_FREERTOS_30_009:  [** `tickcounter_get_current_ms` shall set `*current_ms` to the number of milliseconds elapsed since the `tickcounter_create` call for the specified `tick_counter` and return 0 to indicate success (In FreeRTOS this call has no failure case.) **]**
-
-**SRS_TICKCOUNTER_FREERTOS_30_010: [** If the FreeRTOS call `xTaskGetTickCount` experiences a single overflow between the calls to `tickcounter_create` and `tickcounter_get_current_ms`, the `tickcounter_get_current_ms` call shall still return the correct interval. **]**  

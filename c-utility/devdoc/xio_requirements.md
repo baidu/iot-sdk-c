@@ -1,9 +1,9 @@
-xio requirements
+xio 模块
 ================
 
-## Overview
+## 简介
 
-xio is module that implements an IO interface, abstracting from upper layers the functionality of simply sending or receiving a sequence of bytes.
+xio是一个实现IO接口的模块。对于上层接口提供了一个数据收发的抽象接口。
 
 ## Exposed API
 
@@ -67,17 +67,17 @@ extern int xio_setoption(XIO_HANDLE xio, const char* optionName, const void* val
 extern XIO_HANDLE xio_create(const IO_INTERFACE_DESCRIPTION* io_interface_description, const void* io_create_parameters);
 ```
 
-**SRS_XIO_01_001: [** xio_create shall return on success a non-NULL handle to a new IO interface. **]**
+**SRS_XIO_01_001: [** xio_create 会返回一个非NULL的句柄，指向新创建的IO接口。 **]**
 
-**SRS_XIO_01_002: [** In order to instantiate the concrete IO implementation the function concrete_xio_create from the io_interface_description shall be called, passing the xio_create_parameters argument. **]**
+**SRS_XIO_01_002: [** 为了实例化具体的IO接口，io_interface_description结构体中的concrete_xio_create将会被调用，传入xio_create_parameters作为参数。 **]**
 
-**SRS_XIO_01_016: [** If the underlying concrete_xio_create call fails, xio_create shall return NULL. **]**
+**SRS_XIO_01_016: [** 如果底层的concrete_xio_create失败，xio_create将会返回NULL。 **]**
 
-**SRS_XIO_01_003: [** If the argument io_interface_description is NULL, xio_create shall return NULL. **]**
+**SRS_XIO_01_003: [** 如果参数io_interface_description是NULL，xio_create将会返回NULL。 **]**
 
-**SRS_XIO_01_004: [** If any io_interface_description member is NULL, xio_create shall return NULL. **]**
+**SRS_XIO_01_004: [** 如果io_interface_description中的任何成员是NULL，xio_create将会返回NULL。 **]**
 
-**SRS_XIO_01_017: [** If allocating the memory needed for the IO interface fails then xio_create shall return NULL. **]**
+**SRS_XIO_01_017: [** 如果对于IO接口的内存分配失败，xio_create将会返回NULL。 **]**
 
 ### xio_destroy
 
@@ -85,11 +85,11 @@ extern XIO_HANDLE xio_create(const IO_INTERFACE_DESCRIPTION* io_interface_descri
 extern void xio_destroy(XIO_HANDLE xio);
 ```
 
-**SRS_XIO_01_005: [** xio_destroy shall free all resources associated with the IO handle. **]**
+**SRS_XIO_01_005: [** xio_destroy将会释放IO handle包含的所有资源。 **]**
 
-**SRS_XIO_01_006: [** xio_destroy shall also call the concrete_xio_destroy function that is member of the io_interface_description argument passed to xio_create, while passing as argument to concrete_xio_destroy the result of the underlying concrete_xio_create handle that was called as part of the xio_create call. **]**
+**SRS_XIO_01_006: [** xio_destroy将会调用具体的concrete_xio_destroy函数进行IO接口的创建，concrete_xio_destroy是io_interface_description的成员之一，是在xio_create的时候传入的函数指针。 **]**
 
-**SRS_XIO_01_007: [** If the argument io is NULL, xio_destroy shall do nothing. **]**
+**SRS_XIO_01_007: [** 如果argument为NULL，xio_destroy将什么都不做。 **]**
 
 ### xio_open
 
@@ -97,13 +97,13 @@ extern void xio_destroy(XIO_HANDLE xio);
 extern int xio_open(XIO_HANDLE xio, ON_IO_OPEN_COMPLETE on_io_open_complete, void* on_io_open_complete_context, ON_BYTES_RECEIVED on_bytes_received, void* on_bytes_received_context, ON_IO_ERROR on_io_error, void* on_io_error_context);
 ```
 
-**SRS_XIO_01_019: [** xio_open shall call the specific concrete_xio_open function specified in xio_create, passing callback function and context arguments for three events: open completed, bytes received, and IO error. **]**
+**SRS_XIO_01_019: [** xio_open会调用特定的 concrete_xio_open 函数，这个函数也是在xio_create中传入的。同时传入的还有以下几个回调函数：open completed, bytes received, and IO error。 **]**
 
-**SRS_XIO_01_020: [** On success, xio_open shall return 0. **]**
+**SRS_XIO_01_020: [** 成功，xio_open将会返回0。 **]**
 
-**SRS_XIO_01_021: [** If handle is NULL, xio_open shall return a non-zero value. **]**
+**SRS_XIO_01_021: [** 如果handle为NULL，xio_open将会返回一个非0值。 **]**
 
-**SRS_XIO_01_022: [** If the underlying concrete_xio_open fails, xio_open shall return a non-zero value. **]**
+**SRS_XIO_01_022: [** 如果底层的concrete_xio_open失败，xio_open将会返回一个非0值。 **]**
 
 ### xio_close
 
@@ -111,13 +111,13 @@ extern int xio_open(XIO_HANDLE xio, ON_IO_OPEN_COMPLETE on_io_open_complete, voi
 extern int xio_close(XIO_HANDLE xio, ON_IO_CLOSE_COMPLETE on_io_close_complete, void* callback_context);
 ```
 
-**SRS_XIO_01_023: [** xio_close shall call the specific concrete_xio_close function specified in xio_create. **]**
+**SRS_XIO_01_023: [** xio_close将会调用xio_create传入的特定的concrete_xio_close函数。 **]**
 
-**SRS_XIO_01_024: [** On success, xio_close shall return 0. **]**
+**SRS_XIO_01_024: [** 成功，xio_close会返回0。**]**
 
-**SRS_XIO_01_025: [** If the argument io is NULL, xio_close shall return a non-zero value. **]**
+**SRS_XIO_01_025: [** 如果参数 xio 是NULL，xio_close将会返回一个非0值。 **]**
 
-**SRS_XIO_01_026: [** If the underlying concrete_xio_close fails, xio_close shall return a non-zero value. **]**
+**SRS_XIO_01_026: [** 如果底层的concrete_xio_close失败了，xio_close将会返回一个非0值。**]**
 
 ### xio_send
 
