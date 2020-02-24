@@ -14,7 +14,7 @@
 ## 如何克隆资源库 ##
 该代码库使用了一些第三方库作为子模块依赖关系。为了自动克隆这些子模块，您需要使用如下所述的--recursive选项：
 
-    	git clone --recursive https://github.com/baidu/iot-edge-c-sdk.git
+    	git clone --recursive https://github.com/baidu/iot-sdk-c.git
 
 ## OS平台和硬件兼容性 ##
 百度天工IoT Edge SDK可用于广泛的操作系统平台和设备。对于设备的最低要求是：

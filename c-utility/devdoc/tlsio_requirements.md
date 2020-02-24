@@ -1,22 +1,22 @@
 # tlsio
 
-## Overview
+## 简介
 
 This specification defines generic behavior for tlsio adapters, which operate primarily through the `xio` 
-interface and provide communication to remote systems over a TLS-conformant secure channel.
+interface and provide communication to remote systems over a TLS-conformant secure channel.该文档定义了tlsio适配器的通用行为。该适配器运行在`xio`接口之上，提供了和远端系统进行TLS数据传输的通道。
 
-## References
+## 引用
 
 [TLS Protocol (RFC2246)](https://www.ietf.org/rfc/rfc2246.txt)
 
 [TLS Protocol (generic information)](https://en.wikipedia.org/wiki/Transport_Layer_Security)
 
-[xio.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/xio.h)
+[xio.h](../../c-utility/inc/azure_c_shared_utility/xio.h)
 
 
-## Exposed API
+## 暴露的 API
 
-**SRS_TLSIO_30_001: [** The tlsio shall implement and export all the Concrete functions in the VTable IO_INTERFACE_DESCRIPTION defined in the `xio.h`.
+**SRS_TLSIO_30_001: [** tlsio适配器需要提供所有在IO_INTERFACE_DESCRIPTION（定义在`xio.h`中）中定义接口的具体实现。
 ```c
 typedef OPTIONHANDLER_HANDLE (*IO_RETRIEVEOPTIONS)(CONCRETE_IO_HANDLE concrete_io);
 typedef CONCRETE_IO_HANDLE(*IO_CREATE)(void* io_create_parameters);
@@ -47,7 +47,7 @@ typedef struct IO_INTERFACE_DESCRIPTION_TAG
 ```
 **]**
 
-The following types from `xio.h` are also referenced in individual requirements.
+以下类型（定义在`xio.h`中）在适配器中也会使用到。
 ```c
 
 typedef enum IO_OPEN_RESULT_TAG
@@ -79,19 +79,19 @@ typedef struct TLSIO_CONFIG_TAG
 } TLSIO_CONFIG;
 ```
 
-## External State
-The external state of the tlsio adapter is determined by which of the adapter's interface functions have been called and which callbacks have been performed. The adapter's internal state should map cleanly to its external state, but the mapping is not necessarily 1:1. The external states are defined as follows:
+## 外部状态
+tlsio适配器的外部状态，由具体的接口函数调用以及相关的回调函数的调用的不同而不同。适配器的内部状态应该清晰地映射到它的外部状态，但是这种映射不是1：1的。外部状态的定义如下：
 
-* TLSIO_STATE_EXT_CLOSED means either that the module is newly constructed by `tlsio_create`, that the `tlsio_close_async` complete callback has been received, or that the `on_tlsio_open_complete` callback has returned with `IO_OPEN_ERROR`.
-* TLSIO_STATE_EXT_OPENING means that the `tlsio_open_async` call has completed successfully but the `on_tlsio_open_complete` callback has not been performed.
-* TLSIO_STATE_EXT_OPEN means that the `on_tlsio_open_complete` callback has returned with `IO_OPEN_OK`.
-* TLSIO_STATE_EXT_CLOSING means that either the `tlsio_close_async` call has completed successfully but the `on_tlsio_close_complete` callback has not yet been performed, or that  the `on_tlsio_open_complete` callback has returned with `IO_OPEN_CANCELLED`.
-* TLSIO_STATE_EXT_ERROR means that `on_io_error` has been called from `tlsio_dowork`.
+* TLSIO_STATE_EXT_CLOSED 该状态表示该模块要么刚刚被创建，通过`tlsio_create`接口，或者也有可能是接收到了`tlsio_close_async` 执行完成的回调，再或者`on_tlsio_open_complete` 回调函数返回了一个 `IO_OPEN_ERROR`。
+* TLSIO_STATE_EXT_OPENING 该状态表示`tlsio_open_async` 的调用成功执行完成但是`on_tlsio_open_complete` 回调函数还没有被触发。
+* TLSIO_STATE_EXT_OPEN 表示`on_tlsio_open_complete`回调返回了`IO_OPEN_OK`。
+* TLSIO_STATE_EXT_CLOSING 表示，要么`tlsio_close_async`被成功执行完成，但是`on_tlsio_close_complete`回调还没有被触发。或者`on_tlsio_open_complete` 回调返回了一个 `IO_OPEN_CANCELLED`状态码。
+* TLSIO_STATE_EXT_ERROR 表示  `tlsio_dowork`中调用了`on_io_error`回调接口。
 
-## State Transitions
-This list shows the effect of the calls as a function of state with happy internal functionality. Unhappy functionality is not shown. The `tlsio_setoption` and `tlsio_getoptions` calls are not shown because they have no effect on state and are always allowed. Calls to `tlsio_send_async` also do not affect state, and are allowed only during TLSIO_STATE_EXT_OPEN.
+## 状态转换
+下面的表显示了各个函数调用对于状态转化的效果，`tlsio_setoption` 和 `tlsio_getoptions` 没有显示是因为他们对于状态切换不起作用。 `tlsio_send_async`也不会切换状态，并且仅当TLSIO_STATE_EXT_OPEN状态下才可以调用。
 
-All transitions into TLSIO_STATE_EXT_CLOSED are understood to pass through TLSIO_STATE_EXT_CLOSING.
+所有进入 TLSIO_STATE_EXT_CLOSED 状态的转换，其实之前都是经过了TLSIO_STATE_EXT_CLOSING状态的。
 
 
 <table>
@@ -196,113 +196,98 @@ All transitions into TLSIO_STATE_EXT_CLOSED are understood to pass through TLSIO
 
 ![State transition diagram](img/tlsio_state_diagram.png)
 
-## Definitions 
+## 名词解释 
 
-#### Explicit state transitions
+#### 显示的状态转换
 
-Throughout this document, state transitions only occur as explicitly specified. If no state transition is called out, then none is allowed. (So "do nothing" is always understood as the default.)
+在这篇文档中，我们的状态切换只会通过显示的状态指定而产生。如果没有状态切换发生，默认情况下就是什么都不做。
 
-#### Specified state transitions
+#### 指定的状态切换
 
-Requirements in this document use the phrase "shall enter TLSIO_STATE_EXT_XXXX" to specify behavior. Here are the definitions of the state transition phrases:
+这篇文档中会使用“进入 TLSIO_STATE_EXT_XXXX状态”这种短句来标识某种行为，以下定义了这类状态切换语句：
 
-##### "enter TLSIO_STATE_EXT_ERROR"
-**SRS_TLSIO_30_005: [** The phrase "enter TLSIO_STATE_EXT_ERROR" means the adapter shall call the `on_io_error` function and pass the `on_io_error_context` that was supplied in `tlsio_open_async`. **]**
+##### "进入 TLSIO_STATE_EXT_ERROR 状态"
+**SRS_TLSIO_30_005: [** "进入 TLSIO_STATE_EXT_ERROR状态"意味着适配器应该调用 `on_io_error` 并且将`tlsio_open_async`获取到的ctx信息传入 `on_io_error_context`  **]**
 
-##### "enter TLSIO_STATE_EXT_CLOSING"
-**SRS_TLSIO_30_009: [** The phrase "enter TLSIO_STATE_EXT_CLOSING" means the adapter shall iterate through any unsent messages in the queue and shall delete each message after calling its `on_send_complete` with the associated `callback_context` and `IO_SEND_CANCELLED`. **]**
+##### "进入 TLSIO_STATE_EXT_CLOSING 状态"
+**SRS_TLSIO_30_009: [** "进入 TLSIO_STATE_EXT_CLOSING 状态" 意味着适配器将会遍历未发送消息队列，并且在调用完 `on_send_complete` 之后删除所有的消息。在调用 `on_send_complete` 时，需要带上`callback_context` 以及 `IO_SEND_CANCELLED`状态。 **]**
 
-##### "enter TLSIO_STATE_EXT_CLOSED"
-**SRS_TLSIO_30_006: [** The phrase "enter TLSIO_STATE_EXT_CLOSED" means the adapter shall forcibly close any existing connections then call the `on_io_close_complete` function and pass the `on_io_close_complete_context` that was supplied in `tlsio_close_async`. **]**
+##### "进入 TLSIO_STATE_EXT_CLOSED 状态"
+**SRS_TLSIO_30_006: [** "进入 TLSIO_STATE_EXT_CLOSED状态"意味着适配器将会强制关闭所有现有的连接，同时调用`on_io_close_complete`回调，同时传入由`tlsio_close_async`传入的 `on_io_close_complete_context`参数 **]**
 
-##### "enter TLSIO_STATE_EXT_OPENING"
-The phrase "enter TLSIO_STATE_EXT_OPENING" means the adapter will continute the process of opening the TSL connection to the host on the next `tlsio_dowork` call, but no other externally visible action is being specified.
+##### "进入 TLSIO_STATE_EXT_OPENING 状态"
+"进入 TLSIO_STATE_EXT_OPENING 状态"意味着适配器将在下一次 `tlsio_dowork` 调用的时候，开启和主机的TLS连接。
 
-##### "enter TLSIO_STATE_EXT_OPEN"
-**SRS_TLSIO_30_007: [** The phrase "enter TLSIO_STATE_EXT_OPEN" means the adapter shall call the `on_io_open_complete` function and pass IO_OPEN_OK and the `on_io_open_complete_context` that was supplied in `tlsio_open_async`. **]**
+##### "进入 TLSIO_STATE_EXT_OPEN 状态"
+**SRS_TLSIO_30_007: [** "进入 TLSIO_STATE_EXT_OPEN 状态"意味着适配器将会调用`on_io_open_complete`，同时传入IO_OPEN_OK状态标志以及由`tlsio_open_async`传入的`on_io_open_complete_context` **]**
 
-##### "destroy the failed message"
-**SRS_TLSIO_30_002: [** The phrase "destroy the failed message" means that the adapter shall remove the message from the queue and destroy it after calling the message's `on_send_complete` along with its associated `callback_context` and `IO_SEND_ERROR`. **]**
-
-
+##### "销毁失败的消息"
+**SRS_TLSIO_30_002: [** "销毁失败的消息"意味着适配器将会调用 `on_send_complete` 回调函数，传入`IO_SEND_ERROR`回调标志以及`callback_context`。之后会从消息队列中销毁该消息。 **]**
 
 
-## API Calls
+
+
+## API 调用
 
 ###   tlsio_get_interface_description
 ```c
 const IO_INTERFACE_DESCRIPTION* tlsio_get_interface_description(void);
 ```
 
-**SRS_TLSIO_30_008: [** The tlsio_get_interface_description shall return the VTable IO_INTERFACE_DESCRIPTION. **]**
+**SRS_TLSIO_30_008: [** tlsio_get_interface_description 将会返回 IO_INTERFACE_DESCRIPTION类型的一个结构体对象。 **]**
 
 
 ###   tlsio_create
-Implementation of `concrete_io_create`. 
+`concrete_io_create`的实现. 
 ```c
 CONCRETE_IO_HANDLE tlsio_create(void* io_create_parameters);
 ```
 
-##### _Direct_ versus _chained_ tlsio adapters
+##### _直接的_ VS _串联的_ tlsio 适配器
 
-Tlsio adapters have two different styles of implementation: _direct_, and _chained_. A _direct_
-tlsio adapter communicates directly with the remote host using a TCP port that the tlsio adapter
-owns. A _chained_ tlsio adapter does not own a TCP port, and instead owns another xio adapter --
-typically a `socketio` as explained 
-[here](https://github.com/Azure/azure-c-shared-utility/blob/master/devdoc/porting_guide.md#socketio-adapter-overview)
-which it uses to communicate with the remote host.
+Tlsio适配器有两种不同的实现方式：_直接的_, 以及 _串联的_。一个 _直接的_ tlsio适配器可以直接和服务器直接通过TCP端口进行通讯。一个 _串联的_ tlsio接口自己不拥有一个TCP连接，而是拥有另一个xio适配器 -- 典型的，一般是一个`socketio`适配器，从[这里](../../PortingGuide.md#socketio-adapter-overview)可以得到更多信息。该socketio适配器负责和远程服务器进行TCP通讯。
 
-For the purposes of this spec, an _owned xio resource_ is an xio adapter created by the tlsio
-adapter to communicate with the remote host, and whose lifetime is managed by the tlsio 
-adapter according to standard programming practices. Its lifetime management is covered by the
-"all necessary resources" clauses of the `tlsio_create` and `tlsio_destroy` requirements.
+在本文档中，_拥有的xio资源_ 表示一个xio适配器，该适配器用于和远程服务器进行通讯。它的生命周期由tlsio适配器管理。伴随着`tlsio_create` 和 `tlsio_destroy`的调用，其相应的资源会被创建或回收。
 
-For _chained_ tlsio adapters, the _owned xio resource_ type may be specifed in the
-`underlying_io_interface` member of `io_create_parameters`. If it is not, then it is
-understood that the tlsio adapter will need to create a `socketio` 
-using the supplied `hostname` and `port` via the global
-`socketio_get_interface_description` function defined in 
-[socketio.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/socketio.h).
-This practical necessity is not specified in this document as a requirement because it is 
-considered an internal implementation detail.
+对于 _串联的_ tlsio适配器，它所 _拥有的xio资源_ 由`io_create_parameters`中的`underlying_io_interface` 成员变量指定。如果没有指定的话，那tlsio适配器需要通过提供的`hostname` 和 `port`创建一个`socketio`（定义在[socketio.h](../../c-utility/inc/azure_c_shared_utility/socketio.h)中）。
 
 
-**SRS_TLSIO_30_010: [** The `tlsio_create` shall allocate and initialize all necessary resources and return an instance of the `tlsio` in TLSIO_STATE_EXT_CLOSED. **]**
+**SRS_TLSIO_30_010: [** `tlsio_create` 应该分配并且初始化必要的资源，并且返回一个 `tlsio`的实例，处于TLSIO_STATE_EXT_CLOSED状态中。 **]**
 
-**SRS_TLSIO_30_011: [** If any resource allocation fails, `tlsio_create` shall return NULL. **]**
+**SRS_TLSIO_30_011: [** 如果任何的资源分配失败, `tlsio_create` 将返回 NULL. **]**
 
-**SRS_TLSIO_30_012: [** The `tlsio_create` shall receive the connection configuration as a `TLSIO_CONFIG*` in `io_create_parameters`. **]**
+**SRS_TLSIO_30_012: [** `tlsio_create` 将会从`io_create_parameters`中获取连接配置信息。 **]**
 
-**SRS_TLSIO_30_013: [** If the `io_create_parameters` value is NULL, `tlsio_create` shall log an error and return NULL. **]**
+**SRS_TLSIO_30_013: [** 如果`io_create_parameters` 是 NULL, `tlsio_create` 将记录一个错误并且返回 NULL。 **]**
 
-**SRS_TLSIO_30_014: [** If the `hostname` member of `io_create_parameters` value is NULL, `tlsio_create` shall log an error and return NULL. **]**
+**SRS_TLSIO_30_014: [** 如果`io_create_parameters`的成员`hostname`是 NULL, `tlsio_create`  将记录一个错误并且返回 NULL。 **]**
 
-**SRS_TLSIO_30_015: [** If the `port` member of `io_create_parameters` value is less than 0 or greater than 0xffff, `tlsio_create` shall log an error and return NULL. **]**
+**SRS_TLSIO_30_015: [** 如果`io_create_parameters`的成员`port` 小于 0 或者大于 0xffff, `tlsio_create` 将记录一个错误并且返回 NULL。 **]**
 
-**SRS_TLSIO_30_016: [** `tlsio_create` shall make a copy of the `hostname` member of `io_create_parameters` to allow deletion of `hostname` immediately after the call. This copy may be delegated to an underlying `xio`. **]**
+**SRS_TLSIO_30_016: [** `tlsio_create` 将会对`io_create_parameters`的成员`hostname`制作一份拷贝，并且允许 `hostname` 在该操作后立刻被删除. 这份拷贝会传递给底层的 `xio`. **]**
 
-**SRS_TLSIO_30_017: [** For _direct_ designs, if either the `underlying_io_interface` or `underlying_io_parameters` of `io_create_parameters` is non-NULL, `tlsio_create` shall log an error and return NULL. **]**
+**SRS_TLSIO_30_017: [** 对于 _直接_ 模式, 如果`io_create_parameters`中的成员`underlying_io_interface` 或 `underlying_io_parameters`不是NULL, `tlsio_create` 将记录一个错误并且返回 NULL。 **]**
 
-**SRS_TLSIO_30_018: [** For _chained_ designs, if the `underlying_io_interface` member of `io_create_parameters` is non-NULL, `tlsio_create` shall use `underlying_io_interface` to create an _owned xio resource_ for remote host communication. **]**
+**SRS_TLSIO_30_018: [** 对于 _串联_ 模式，如果`io_create_parameters`中的成员`underlying_io_interface`不是NULL，`tlsio_create`将会使用`underlying_io_interface`来创建一个 _拥有的xio资源_ 来进行远程的TCP通讯。 **]**
 
-**SRS_TLSIO_30_019: [** For _chained_ designs with a non-NULL `underlying_io_interface` parameter, `tlsio_create` shall pass the `underlying_io_parameters` to `underlying_io_interface->xio_create` when creating the _owned xio resource_. **]**
+**SRS_TLSIO_30_019: [** 对于 _串联_ 模式，`underlying_io_interface`参数是非NULL的，`tlsio_create`将会传入`underlying_io_parameters`给`underlying_io_interface->xio_create`来创建 _拥有的xio资源_  **]**
 
 
 ###   tlsio_destroy
-Implementation of `concrete_io_destroy`
+`concrete_io_destroy`的实现。
 ```c
 void tlsio_destroy(CONCRETE_IO_HANDLE tlsio_handle);
 ```
 
-**SRS_TLSIO_30_020: [** If `tlsio_handle` is NULL, `tlsio_destroy` shall do nothing. **]**
+**SRS_TLSIO_30_020: [** 如果 `tlsio_handle`是NULL，`tlsio_destroy`将会什么都不做。 **]**
 
-**SRS_TLSIO_30_021: [** The `tlsio_destroy` shall release all allocated resources and then release `tlsio_handle`. **]**
+**SRS_TLSIO_30_021: [** `tlsio_destroy`将会释放所有分配的资源，之后释放`tlsio_handle`句柄。 **]**
 
-**SRS_TLSIO_30_022: [** If the adapter is in any state other than TLSIO_STATE_EXT_CLOSED when `tlsio_destroy` is called, the adapter shall [enter TLSIO_STATE_EXT_CLOSING](#enter-TLSIO_STATE_EXT_CLOSING "Iterate through any unsent messages in the queue and delete each message after calling its `on_send_complete` with the associated `callback_context` and `IO_SEND_CANCELLED`.") and then [enter TLSIO_STATE_EXT_CLOSED](#enter-TLSIO_STATE_EXT_CLOSED "Forcibly close any existing connections then call the `on_io_close_complete` function and pass the `on_io_close_complete_context` that was supplied in `tlsio_close_async`.") before completing the destroy process. **]**
+**SRS_TLSIO_30_022: [** 如果在调用 `tlsio_destroy` 时，adapter处于非 TLSIO_STATE_EXT_CLOSED 的任意一个状态，adapter应该[进入 TLSIO_STATE_EXT_CLOSING 状态](#enter-TLSIO_STATE_EXT_CLOSING "遍历未发送的消息队列，调用该消息的 `on_send_complete`方法（传入相应的`callback_context` 和 `IO_SEND_CANCELLED`状态）之后删除该消息。")然后在完成destroy操作之前，[进入 TLSIO_STATE_EXT_CLOSED 状态](#enter-TLSIO_STATE_EXT_CLOSED "强制关闭任何现存的连接，然后调用 `on_io_close_complete` 函数（其中的`on_io_close_complete_context` 参数就是 `tlsio_close_async`函数传进来的）")  **]**
 
 
 ###   tlsio_open_async
-Implementation of `concrete_io_open`
+`concrete_io_open` 的实现
 
 ```c
 int tlsio_open_async(
@@ -315,178 +300,166 @@ int tlsio_open_async(
     void* on_io_error_context);
 ```
 
-**SRS_TLSIO_30_030: [** If the `tlsio_handle` parameter is NULL, `tlsio_open_async` shall log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_030: [** 如果 `tlsio_handle` 参数是 NULL，`tlsio_open_async` 应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_031: [** If the on_io_open_complete parameter is NULL, `tlsio_open_async` shall log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_031: [** 如果参数on_io_open_complete是NULL，`tlsio_open_async` 应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_032: [** If the on_bytes_received parameter is NULL, `tlsio_open_async` shall log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_032: [** 如果参数 on_bytes_received 是NULL，`tlsio_open_async` 应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_033: [** If the on_io_error parameter is NULL, `tlsio_open_async` shall log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_033: [** 如果参数 on_io_error 是NULL，`tlsio_open_async` 应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_037: [** If the adapter is in any state other than TLSIO_STATE_EXT_CLOSED when `tlsio_open_async` is called, it shall log an error, and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_037: [** 如果在调用 `tlsio_open_async` 时 adapter 处于除 TLSIO_STATE_EXT_CLOSED 外任意一种状态，`tlsio_open_async` 应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_038: [** If `tlsio_open_async` fails to  [enter TLSIO_STATE_EXT_OPENING](#enter-TLSIO_STATE_EXT_OPENING "Continute the process of opening the TSL connection to the host on the next `tlsio_dowork` call") it shall return `_FAILURE_`. **]**
+**SRS_TLSIO_30_038: [** 如果 `tlsio_open_async` [进入 TLSIO_STATE_EXT_OPENING 状态](#enter-TLSIO_STATE_EXT_OPENING "在下一次`tlsio_dowork`调用的过程中继续处理和远程服务器的TLS握手连接过程")失败，它应该返回`_FAILURE_`。  **]**
 
-**SRS_TLSIO_30_039: [** On failure, `tlsio_open_async` shall not call `on_io_open_complete`. **]**
+**SRS_TLSIO_30_039: [** 失败，`tlsio_open_async`不应该调用`on_io_open_complete`  **]**
 
-**SRS_TLSIO_30_034: [** On success, `tlsio_open_async` shall store the provided `on_bytes_received`,  `on_bytes_received_context`, `on_io_error`, `on_io_error_context`, `on_io_open_complete`,  and `on_io_open_complete_context` parameters for later use as specified and tested per other line entries in this document. **]**
+**SRS_TLSIO_30_034: [** 成功，`tlsio_open_async`应该保存`on_bytes_received`,  `on_bytes_received_context`, `on_io_error`, `on_io_error_context`, `on_io_open_complete`,  以及 `on_io_open_complete_context`这些参数。这些参数会在后续的处理工程中使用到。 **]**
 
-**SRS_TLSIO_30_035: [** On success, `tlsio_open_async` shall cause the adapter to [enter TLSIO_STATE_EXT_OPENING](#enter-TLSIO_STATE_EXT_OPENING "Continute the process of opening the TSL connection to the host on the next `tlsio_dowork` call") and return 0. **]**
+**SRS_TLSIO_30_035: [** 成功，`tlsio_open_async` 应该导致adapter[进入 TLSIO_STATE_EXT_OPENING 状态](#enter-TLSIO_STATE_EXT_OPENING "在下一次`tlsio_dowork`调用的过程中继续处理和远程服务器的TLS握手连接过程")并且返回0。 **]**
 
 
 ###   tlsio_close_async
-Implementation of `concrete_io_close`
+`concrete_io_close` 的实现
 ```c
 int tlsio_close_async(CONCRETE_IO_HANDLE tlsio_handle, 
     ON_IO_CLOSE_COMPLETE on_io_close_complete, void* callback_context);
 ```
 
-**SRS_TLSIO_30_050: [** If the `tlsio_handle` parameter is NULL, `tlsio_close_async` shall log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_050: [** 如果 `tlsio_handle` 参数是NULL, `tlsio_close_async`应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_055: [** If the `on_io_close_complete` parameter is NULL, `tlsio_close_async` shall log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_055: [** 如果 `on_io_close_complete` 参数是NULL, `tlsio_close_async`应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_054: [** On failure, the adapter shall not call `on_io_close_complete`. **]**
+**SRS_TLSIO_30_054: [** 如果失败，该适配器不应该调用`on_io_close_complete`。 **]**
 
-**SRS_TLSIO_30_053: [** If the adapter is in any state other than TLSIO_STATE_EXT_OPEN or TLSIO_STATE_EXT_ERROR then `tlsio_close_async` shall log that `tlsio_close_async` has been called and then continue normally. **]**
+**SRS_TLSIO_30_053: [** 如果适配器处于任何非 TLSIO_STATE_EXT_OPEN 或 TLSIO_STATE_EXT_ERROR 的状态，则`tlsio_close_async`应该记录`tlsio_close_async`已经被调用了，继续之后的操作。 **]**
 
-**SRS_TLSIO_30_057: [** On success, if the adapter is in TLSIO_STATE_EXT_OPENING, it shall call `on_io_open_complete` with the `on_io_open_complete_context` supplied in `tlsio_open_async` and `IO_OPEN_CANCELLED`. This callback shall be made before changing the internal state of the adapter. **]**
+**SRS_TLSIO_30_057: [** 如果成功，并且如果adapter处于 TLSIO_STATE_EXT_OPENING 状态，它应该调用 `on_io_open_complete`函数（其中的`on_io_open_complete_context`参数是 `tlsio_open_async`传入的，状态设置为 `IO_OPEN_CANCELLED`）。该回调应该在改变adaptor内部状态之前被调用。 **]**
 
-**SRS_TLSIO_30_056: [** On success the adapter shall [enter TLSIO_STATE_EXT_CLOSING](#enter-TLSIO_STATE_EXT_CLOSING "Iterate through any unsent messages in the queue and delete each message after calling its `on_send_complete` with the associated `callback_context` and `IO_SEND_CANCELLED`."). **]**
+**SRS_TLSIO_30_056: [** 如果成功，adapter应该[进入 TLSIO_STATE_EXT_CLOSING 状态](#enter-TLSIO_STATE_EXT_CLOSING "遍历未发送的消息队列，调用该消息的 `on_send_complete`方法（传入相应的`callback_context` 和 `IO_SEND_CANCELLED`状态）之后删除该消息。") **]**
 
-**SRS_TLSIO_30_051: [** On success, if the underlying TLS does not support asynchronous closing or if the adapter is not in TLSIO_STATE_EXT_OPEN, then the adapter shall [enter TLSIO_STATE_EXT_CLOSED](#enter-TLSIO_STATE_EXT_CLOSED "Forcibly close any existing connections then call the `on_io_close_complete` function and pass the `on_io_close_complete_context` that was supplied in `tlsio_close_async`.") immediately after entering TLSIO_STATE_EXT_CLOSING. **]**
+**SRS_TLSIO_30_051: [** 如果成功，并且如果底层的TLS接口不支持异步的 close 或者适配器不在 TLSIO_STATE_EXT_OPEN 状态，则适配器应该在进入 TLSIO_STATE_EXT_CLOSING 状态之后立刻[进入 TLSIO_STATE_EXT_CLOSED 状态](#enter-TLSIO_STATE_EXT_CLOSED "强制关闭任何现存的连接，然后调用 `on_io_close_complete` 函数（其中的`on_io_close_complete_context` 参数就是 `tlsio_close_async`函数传进来的）") **]**
 
-**SRS_TLSIO_30_052: [** On success `tlsio_close_async` shall return 0. **]**
+**SRS_TLSIO_30_052: [** 如果成功，`tlsio_close_async`应该返回0。 **]**
 
 
 ###   tlsio_send_async
-Implementation of `concrete_io_send`
+`concrete_io_send` 的实现
 ```c
 int tlsio_send_async(CONCRETE_IO_HANDLE tlsio_handle, const void* buffer, 
     size_t size, ON_SEND_COMPLETE on_send_complete, void* callback_context);
 ```
 
-**SRS_TLSIO_30_060: [** If the `tlsio_handle` parameter is NULL, `tlsio_send_async` shall log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_060: [** 如果 `tlsio_handle` 参数是NULL, `tlsio_send_async`应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_061: [** If the `buffer` is NULL, `tlsio_send_async` shall log the error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_061: [** 如果 `buffer` 参数是NULL, `tlsio_send_async`应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_062: [** If the `on_send_complete` is NULL, `tlsio_send_async` shall log the error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_062: [** 如果 `on_send_complete` 参数是NULL, `tlsio_send_async`应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_067: [** If the `size` is 0, `tlsio_send_async` shall log the error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_067: [** 如果 `size` 参数是0, `tlsio_send_async`应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_065: [** If the adapter state is not TLSIO_STATE_EXT_OPEN, `tlsio_send_async` shall log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_065: [** 如果 adapter 当前状态不是 TLSIO_STATE_EXT_OPEN, `tlsio_send_async`应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_064: [** If the supplied message cannot be enqueued for transmission, `tlsio_send_async` shall log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_064: [** 如果提供的message无法加入发送队列, `tlsio_send_async`应该记录一个错误并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_066: [** On failure, `on_send_complete` shall not be called. **]**
+**SRS_TLSIO_30_066: [** 如果失败了，`on_send_complete`不应该被调用。 **]**
 
-**SRS_TLSIO_30_063: [** On success, `tlsio_send_async` shall enqueue for transmission the `on_send_complete`, the `callback_context`, the `size`, and the contents of `buffer` and then return 0. **]**
+**SRS_TLSIO_30_063: [** 如果成功， `tlsio_send_async`会把数据加入发送队列，同时返回0. **]**
 
 
 ###   tlsio_dowork
-Implementation of `concrete_io_dowork`
+`concrete_io_dowork`的实现
 ```c
 void tlsio_dowork(CONCRETE_IO_HANDLE tlsio_handle);
 ```
-The `tlsio_dowork` call executes async jobs for the tlsio. This includes connection completion, sending to the TLS connection, and checking the TLS connection for available bytes to read.
+`tlsio_dowork`调用会处理tlsio异步的工作，包括建立TLS连接，发送数据，检测可读状态。
 
-**SRS_TLSIO_30_070: [** If the `tlsio_handle` parameter is NULL, `tlsio_dowork` shall do nothing except log an error. **]**
-
-
-#### Behavior selection
-
-**SRS_TLSIO_30_071: [** If the adapter is in TLSIO_STATE_EXT_ERROR then `tlsio_dowork` shall do nothing. **]**
-
-**SRS_TLSIO_30_075: [** If the adapter is in TLSIO_STATE_EXT_CLOSED then `tlsio_dowork` shall do nothing. **]**
-
-**SRS_TLSIO_30_077: [** If the adapter is in TLSIO_STATE_EXT_OPENING then `tlsio_dowork` shall perform only the [TLSIO_STATE_EXT_OPENING behaviors](#TLSIO_STATE_EXT_OPENING-behaviors). **]**
-
-**SRS_TLSIO_30_077: [** If the adapter is in TLSIO_STATE_EXT_OPEN  then `tlsio_dowork` shall perform only the [Data transmission behaviors](#data-transmission-behaviors) and the [Data reception behaviors](#data-reception-behaviors). **]**
-
-**SRS_TLSIO_30_078: [** If the adapter is in TLSIO_STATE_EXT_CLOSING then `tlsio_dowork` shall perform only the [TLSIO_STATE_EXT_CLOSING behaviors](#TLSIO_STATE_EXT_CLOSING-behaviors). **]**
-
-#### TLSIO_STATE_EXT_OPENING behaviors
-
-Transitioning from TLSIO_STATE_EXT_OPENING to TLSIO_STATE_EXT_OPEN may require multiple calls to `tlsio_dowork`. The number of calls required is not specified.
-
-**SRS_TLSIO_30_080: [** The `tlsio_dowork` shall establish a TLS connection using the `hostName` and `port` provided during `tlsio_open_async`. **]**
-
-**SRS_TLSIO_30_082: [** If the connection process fails for any reason, `tlsio_dowork`  shall log an error, call `on_io_open_complete` with the `on_io_open_complete_context` parameter provided in `tlsio_open_async` and `IO_OPEN_ERROR`, and [enter TLSIO_STATE_EXT_CLOSED](#enter-TLSIO_STATE_EXT_CLOSED "Forcibly close any existing connections then call the `on_io_close_complete` function and pass the `on_io_close_complete_context` that was supplied in `tlsio_close_async`."). **]**
-
-**SRS_TLSIO_30_083: [** If `tlsio_dowork` successfully opens the TLS connection it shall [enter TLSIO_STATE_EXT_OPEN](#enter-TLSIO_STATE_EXT_OPEN "Call the `on_io_open_complete` function and pass IO_OPEN_OK and the `on_io_open_complete_context` that was supplied in `tlsio_open_async`."). **]**
-
-#### Data transmission behaviors
+**SRS_TLSIO_30_070: [** 如果`tlsio_handle`参数是NULL，`tlsio_dowork`将什么都不做，只会记录一个错误。 **]**
 
 
-**SRS_TLSIO_30_091: [** If `tlsio_dowork` is able to send all the bytes in an enqueued message, it shall first dequeue the message then call the messages's `on_send_complete` along with its associated `callback_context` and `IO_SEND_OK`. **]**<br/>
-The message needs to be dequeued before calling the callback because the callback may trigger a re-entrant
-`tlsio_close` call which will need a consistent message queue.
+#### 行为选择
 
-**SRS_TLSIO_30_093: [** If the TLS connection was not able to send an entire enqueued message at once, subsequent calls to `tlsio_dowork` shall continue to send the remaining bytes. **]**
+**SRS_TLSIO_30_071: [** 如果adapter处于 TLSIO_STATE_EXT_ERROR 状态，那么 `tlsio_dowork` 应该什么都不做。 **]**
 
-**SRS_TLSIO_30_095: [** If the send process fails before sending all of the bytes in an enqueued message, `tlsio_dowork` shall [destroy the failed message](#destroy-the-failed-message "Remove the message from the queue and destroy it after calling the message's `on_send_complete` along with its associated `callback_context` and `IO_SEND_ERROR`.") and [enter TLSIO_STATE_EXT_ERROR](#enter-TLSIO_STATE_EXT_ERROR "Call the `on_io_error` function and pass the `on_io_error_context` that was supplied in `tlsio_open_async`."). **]**
+**SRS_TLSIO_30_075: [** 如果adapter处于 TLSIO_STATE_EXT_CLOSED 状态，那么 `tlsio_dowork` 应该什么都不做。 **]**
 
-**SRS_TLSIO_30_096: [** If there are no enqueued messages available, `tlsio_dowork` shall do nothing. **]**
+**SRS_TLSIO_30_077: [** 如果adapter处于 TLSIO_STATE_EXT_OPENING 状态，那么 `tlsio_dowork` 应该只进行[TLSIO_STATE_EXT_OPENING 操作](#TLSIO_STATE_EXT_OPENING-behaviors) **]**
 
-#### Data reception behaviors
+**SRS_TLSIO_30_077: [** 如果adapter处于 TLSIO_STATE_EXT_OPEN 状态，那么 `tlsio_dowork` 应该只进行[数据发送操作](#data-transmission-behaviors) 以及 [数据接收操作](#data-reception-behaviors)。 **]**
 
-**SRS_TLSIO_30_100: [** As long as the TLS connection is able to provide received data, `tlsio_dowork` shall repeatedly read this data and call `on_bytes_received` with the pointer to the buffer containing the data, the number of bytes received, and the `on_bytes_received_context`. **]**
+**SRS_TLSIO_30_078: [** 如果adapter处于 TLSIO_STATE_EXT_CLOSING 状态，那么 `tlsio_dowork` 应该只进行[TLSIO_STATE_EXT_CLOSING 操作](#TLSIO_STATE_EXT_CLOSING-behaviors) **]**
 
-**SRS_TLSIO_30_102: [** If the TLS connection receives no data then `tlsio_dowork` shall not call the  `on_bytes_received` callback. **]**
+#### TLSIO_STATE_EXT_OPENING 行为
 
-#### TLSIO_STATE_EXT_CLOSING behaviors
+从 TLSIO_STATE_EXT_OPENING 到 TLSIO_STATE_EXT_OPEN 的状态转换，可能涉及到多个`tlsio_dowork`操作。具体的操作个数不确定。
 
-Adapters whose underlying TLS connection does not have an asynchronous 'closing' state will not have an externally visible TLSIO_STATE_EXT_CLOSING state and so their `tlsio_dowork` will not perform these behaviors.
+**SRS_TLSIO_30_080: [** `tlsio_dowork`会更具`tlsio_open_async`中提供 `hostName` 和 `port` 进行TLS连接。 **]**
 
-**SRS_TLSIO_30_106: [** If the closing process fails to end gracefully, `tlsio_dowork` shall log an error and [enter TLSIO_STATE_EXT_CLOSED](#enter-TLSIO_STATE_EXT_CLOSED "Forcibly close any existing connections then call the `on_io_close_complete` function and pass the `on_io_close_complete_context` that was supplied in `tlsio_close_async`."). **]**
+**SRS_TLSIO_30_082: [** 如果连接过程因为任何原因失败了。`tlsio_dowork`应该记录一条错误，并且调用 `on_io_open_complete`（带上`tlsio_open_async`中的`on_io_open_complete_context`参数以及`IO_OPEN_ERROR`状态，同时[进入 TLSIO_STATE_EXT_CLOSED状态](#enter-TLSIO_STATE_EXT_CLOSED "强制关闭任何现存的连接，然后调用 `on_io_close_complete` 函数（其中的`on_io_close_complete_context` 参数就是 `tlsio_close_async`函数传进来的）")）  **]**
 
-**SRS_TLSIO_30_107: [** If the closing process ends gracefully, `tlsio_dowork` shall [enter TLSIO_STATE_EXT_CLOSED](#enter-TLSIO_STATE_EXT_CLOSED "Forcibly close any existing connections then call the `on_io_close_complete` function and pass the `on_io_close_complete_context` that was supplied in `tlsio_close_async`."). **]**
+**SRS_TLSIO_30_083: [** 如果`tlsio_dowork`成功打开了TLS连接，apapter将会[进入 TLSIO_STATE_EXT_OPEN状态](#enter-TLSIO_STATE_EXT_OPEN "调用 `on_io_open_complete`函数，并且传入 IO_OPEN_OK 状态标志")。 **]**
+
+#### 数据发送行为
+
+
+**SRS_TLSIO_30_091: [** 如果 `tlsio_dowork` 可以一次性发送完一条message中的所有字节数据，他将首先从消息队列中删除该消息，然后调用该消息的 `on_send_complete` 回调方法，该方法中还需带上 `IO_SEND_OK`状态标志位。 **]**<br/>
+在调用该回调函数前需要从消息队列中dequeue该消息，这是因为该回调函数可能会触发一次可重入的`tlsio_close`操作，该操作需要队列的一致性。
+
+**SRS_TLSIO_30_093: [** 如果TLS连接接口无法一次性发送完一个message中所有的数据，后续的 `tlsio_dowork`调用会继续这个发送操作，知道把剩余的字节发送完毕。 **]**
+
+**SRS_TLSIO_30_095: [** 如果进程在发送message中数据时遇到错误导致发送失败，`tlsio_dowork`会[销毁失败的消息](#destroy-the-failed-message "从消息队列中移除该消息，并且调用该消息的`on_send_complete` 方法，填入相对应的`callback_context`参数 以及 `IO_SEND_ERROR`状态标志") 同时 [进入 TLSIO_STATE_EXT_ERROR 状态](#enter-TLSIO_STATE_EXT_ERROR "调用 `on_io_error`回调函数，同时传入`tlsio_open_async`提供的 `on_io_error_context`参数") **]**
+
+**SRS_TLSIO_30_096: [** 如果消息队列中没有消息，`tlsio_dowork`将会什么都不做。 **]**
+
+#### 数据接收行为
+
+**SRS_TLSIO_30_100: [** 只要TLS连接一直有接收数据，`tlsio_dowork` 将会持续地读取这些数据，同时调用`on_bytes_received`回调通知上层。该回调函数中会带上接收数据buffer的地址，以及接收到的字节个数，还有相应的`on_bytes_received_context`参数。 **]**
+
+**SRS_TLSIO_30_102: [** If the TLS connection receives no data then `tlsio_dowork` shall not call the  `on_bytes_received` callback.如果TLS连接当前没有数据接收，`tlsio_dowork`不会调用`on_bytes_received`回调。 **]**
+
+#### TLSIO_STATE_EXT_CLOSING 行为
+
+对于没有异步特性的'closing'状态的TLS连接，适配器将不会有一个显示的TLSIO_STATE_EXT_CLOSING状态，同时他们的 `tlsio_dowork` 也不会执行这些动作。
+
+**SRS_TLSIO_30_106: [** 如果'closing'的操作失败，`tlsio_dowork`会记录一个error并[进入 TLSIO_STATE_EXT_CLOSED 状态](#enter-TLSIO_STATE_EXT_CLOSED "强制关闭任何现存的连接，然后调用 `on_io_close_complete` 函数（其中的`on_io_close_complete_context` 参数就是 `tlsio_close_async`函数传进来的）") **]**
+
+**SRS_TLSIO_30_107: [** 如果'closing'的操作成功，`tlsio_dowork`将会[进入 TLSIO_STATE_EXT_CLOSED 状态](#enter-TLSIO_STATE_EXT_CLOSED "强制关闭任何现存的连接，然后调用 `on_io_close_complete` 函数（其中的`on_io_close_complete_context` 参数就是 `tlsio_close_async`函数传进来的）") **]**
 
 ###   tlsio_setoption
-Implementation of `concrete_io_setoption`. Specific tlsio implementations must define the behavior of successful `tlsio_setoption` calls.
+`concrete_io_setoption`的实现. 特定的tlsio实现可能会需要定义相关`tlsio_setoption`的行为。
 
-The options are conceptually part of `tlsio_create` in that options which are set persist until the instance is destroyed. 
+options是`tlsio_create`过程中创建的一部分，这些option会持久化直到对象被销毁。
 ```c
 int tlsio_setoption(CONCRETE_IO_HANDLE tlsio_handle, const char* optionName, const void* value);
 ```
-**SRS_TLSIO_30_120: [** If the `tlsio_handle` parameter is NULL, `tlsio_setoption` shall do nothing except log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_120: [** 如果`tlsio_handle`参数是NULL，`tlsio_setoption`不会做任何事，除了记录一条日志并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_121: [** If the `optionName` parameter is NULL, `tlsio_setoption` shall do nothing except log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_121: [** 如果`optionName`参数是NULL，`tlsio_setoption`不会做任何事，除了记录一条日志并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_122: [** If the `value` parameter is NULL, `tlsio_setoption` shall do nothing except log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_122: [** 如果`value`参数是NULL，`tlsio_setoption`不会做任何事，除了记录一条日志并且返回 `_FAILURE_`。 **]**
 
-**SRS_TLSIO_30_124 [** Adapters which implement options shall store the option value until `tlsio_destroy` is called. **]**
+**SRS_TLSIO_30_124 [** 实现了`options`接口的适配器需要保存这些`option`信息直到`tlsio_destroy`被调用。 **]**
 
 
 ###   tlsio_retrieveoptions
-Implementation of `concrete_io_retrieveoptions` Specific tlsio implementations must define the behavior of successful `tlsio_retrieveoptions` calls.
+`concrete_io_retrieveoptions`的实现。特定的tlsio实现可能会需要定义相关`tlsio_retrieveoptions`的行为。
 
 ```c
 OPTIONHANDLER_HANDLE tlsio_retrieveoptions(CONCRETE_IO_HANDLE tlsio_handle);
 ```
 
-**SRS_TLSIO_30_160: [** If the `tlsio_handle` parameter is NULL, `tlsio_retrieveoptions` shall do nothing except log an error and return `_FAILURE_`. **]**
+**SRS_TLSIO_30_160: [** 如果`tlsio_handle`参数是NULL，`tlsio_retrieveoptions`不会做任何事，除了记录一条日志并且返回 `_FAILURE_`。 **]**
 
-### Error Recovery Testing
-Error recovery for tlsio adapters is performed by the higher level modules that own the tlsio. There are a very large
-number of error recovery sequences which might be performed, and performing all of the possible retry sequences
-is out-of-scope for this document. However, the two tests here represent a minimal test suite to mimic the retry
-sequences that the higher level modules might perform.
+### 错误恢复测试
+tlsio适配器的错误恢复需要上层模块的支持。也有大量可选的流程用于错误恢复。罗列所有的retry逻辑流程已经超出了本文档的范围。但是这里提供的两个测试用例展示了一套最小的重连流程。上层的模块可以参考。
 
-The test conditions in this section are deliberately underspecified and left to the judgement of the implementer, and code commenting
-in the unit tests themselves will be considered sufficient documentation for any further detail. Any of a number of possible
-specific call sequences is acceptable as long as the unit test meets the criteria of the test requirement. 
+本节中的测试场景特意没有说明，而是留给了实现者。单元测试中的注释应该足够用于相关的文档注解。
 
-The words "high-level retry sequence" as used in this section means that:
-  1. A failure has been injected at some specified point
-  2. `tlsio_close_async` has been called and the `on_io_close_complete` callback has been received.
-  3. `tlsio_open_async` has been called successfully.
-  4. `tlsio_dowork` has been called as necessary to permit this sequence of events.
-  5. The `on_io_open_complete` callback has been received with `IO_OPEN_OK`.
+在本节中提到的"上层重连流程"表示:
+  1. 在程序运行中某个点发生了一个错误。
+  2. `tlsio_close_async`被调用，并且接受到了`on_io_close_complete` 回调。
+  3. `tlsio_open_async` 已经成功被调用。
+  4. `tlsio_dowork` 已经被足够地调用以确保事件处理的正常进行.
+  5. 接收到`on_io_open_complete`回调，并且状态标志为`IO_OPEN_OK`.
 
-Note that the requirements in this section have corresponding entries in the unit test files, but do not
-appear in the implementation code.
-
-**SRS_TLSIO_30_200: [** The "high-level retry sequence" shall succeed after an injected fault which causes `on_io_open_complete` to return with `IO_OPEN_ERROR`. **]**
-
-**SRS_TLSIO_30_201: [** The "high-level retry sequence" shall succeed after an injected fault which causes 
- `on_io_error` to be called. **]**
+需要注意的是，本节中提到的测试需求都存在于相应的单元测试用例文件中，但是不会出现在代码实现中。
