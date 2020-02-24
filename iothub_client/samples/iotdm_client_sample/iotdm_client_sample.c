@@ -459,6 +459,8 @@ static void HandleOtaJob(const SHADOW_MESSAGE_CONTEXT* messageContext, const SHA
         if (result != BOS_OK)
         {
             LogError("Failed to download from BOS");
+            BUFFER_delete(firmwareBuffer);
+            return;
         }
         // Flash the firmware
         BUFFER_delete(firmwareBuffer);
