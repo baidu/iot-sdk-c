@@ -1,24 +1,22 @@
-# Microsoft Azure IoT serializer library for C
+# Baidu IoT 序列化C函数库
 
-This folder contains the following 
-* A helper library for serializing and deserializing data
-* Samples showing how to use the serializer library
+该文件夹包含如下组件 
+* 一个数据序列化、反序列化函数库
+* 一些例子来说明如何使用该序列化/反序列化库。
 
-## Features
-* Format the data you want to send to the Cloud and deserialize data received from the Cloud
-* Simply declare a "model" for the device using Macros
-* Easily implement Azure IoT Device Twins and Methods features
+## 特性
+* 该库可以序列化你要发给云端的数据，同时反序列化从云端接收到的数据。
+* 用户只需要简单地（通过“宏”）为设备定义一个 "model" 即可。
+* 可以方便地实现Baidu IoT设备孪生。
 
-## Using the seralizer library for C
+## 使用C序列化函数库
 
-The seralizer library for C is used with the Azure IoT device SDK for which you will find detailed instructions on how to use on Linux, mbed, Windows and other platforms [here][device-sdk].
+Baidu IoT 设备端SDK使用了该C序列化函数库，关于如何在不同多平台（例如Linux, mbed, Windows等）使用该SDK可以参考[这里][device-sdk]。
 
-## Samples
+## 示例
 
-The repository contains a set of simple samples that will help you get started.
-You can find a list of these samples with instructions on how to run them [here][samples]. 
+该工程中包含了很多简单的例子来指导您如何和使用该库。详细请参考[这里][samples]。
 
 
-[devbox_setup]: ../doc/devbox_setup.md
 [samples]: ./samples/
 [device-sdk]: ../iothub_client/

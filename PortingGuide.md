@@ -9,22 +9,22 @@
 ## 参考
 
 ###### 规范
-- [tickcounter adapter specification](https://github.com/Azure/azure-c-shared-utility/blob/master/devdoc/tickcounter.md)<br/>
-- [agenttime adapter specification](https://github.com/Azure/azure-c-shared-utility/blob/master/devdoc/agenttime_requirements.md)<br/>
-- [threadapi and sleep adapter specification](https://github.com/Azure/azure-c-shared-utility/blob/master/devdoc/threadapi_and_sleep_requirements.md)<br/>
-- [platform adapter specification](https://github.com/Azure/azure-c-shared-utility/blob/master/devdoc/platform_requirements.md)<br/>
-- [tlsio specification](https://github.com/Azure/azure-c-shared-utility/blob/master/devdoc/tlsio_requirements.md)<br/>
-- [xio specification](https://github.com/Azure/azure-c-shared-utility/blob/master/devdoc/xio_requirements.md)<br/>
-- [lock adapter specification](https://github.com/Azure/azure-c-shared-utility/blob/master/devdoc/lock_requirements.md)<br/>
+- [tickcounter 适配器规范](./c-utility/devdoc/tickcounter_freertos_requirement.md)<br/>
+- [agenttime 适配器规范](./c-utility/devdoc/agenttime_requirements.md)<br/>
+- [threadapi 及 sleep 适配器规范](./c-utility/devdoc/threadapi_and_sleep_requirements.md)<br/>
+- [platform 适配器规范](./c-utility/devdoc/platform_requirements.md)<br/>
+- [tlsio 说明](./c-utility/devdoc/tlsio_requirements.md)<br/>
+- [xio 说明](./c-utility/devdoc/xio_requirements.md)<br/>
+- [lock 适配器规范](./c-utility/devdoc/lock_requirements.md)<br/>
 
-###### Header files
-- [tickcounter.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/tickcounter.h)<br/>
-- [threadapi.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/threadapi.h)<br/>
-- [xio.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/xio.h)<br/>
-- [tlsio.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/tlsio.h)<br/>
-- [socketio.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/socketio.h)<br/>
-- [lock.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/lock.h)<br/>
-- [platform.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/platform.h)<br/>
+###### 头文件
+- [tickcounter.h](./c-utility/inc/azure_c_shared_utility/tickcounter.h)<br/>
+- [threadapi.h](./c-utility/inc/azure_c_shared_utility/threadapi.h)<br/>
+- [xio.h](./c-utility/inc/azure_c_shared_utility/xio.h)<br/>
+- [tlsio.h](./c-utility/inc/azure_c_shared_utility/tlsio.h)<br/>
+- [socketio.h](./c-utility/inc/azure_c_shared_utility/socketio.h)<br/>
+- [lock.h](./c-utility/inc/azure_c_shared_utility/lock.h)<br/>
+- [platform.h](./c-utility/inc/azure_c_shared_utility/platform.h)<br/>
 
 
 
@@ -46,7 +46,7 @@
 目前这个采用C99标准编写的C公共库可以很方便的移植到大部分平台，其中有几个组件依赖平台的特定资源来实现所需的功能。
 因此，这个C公共库提供PAL（platform abstraction layer）模块来让这个库可以适配到特定平台。下面就是这个模块的整体架构:
 
-![](https://github.com/baidu/iot-edge-c-sdk/blob/master/pictures/porting_arch.png)
+![](./pictures/porting_arch.png)
 
 必须适配的几个模块如下：
 
@@ -58,7 +58,7 @@
 
 - platform接口提供执行全局初始化和反初始化的逻辑。
 
-- tlsio接口提供标准的基于TLS之上的通讯方式。 IoT Hub不允许不安全接入方式。
+- tlsio接口提供标准的基于TLS之上的通讯方式。
 
 另外，有两个可选的模块，他们是threadapi和lock，这两个模块允许SDK通过特定的线程来进行数据通讯。
 另外一个需要适配的模块是socketio适配器，这个需要配合tlsio不同实现方式。
@@ -125,7 +125,7 @@ lock.c
 
 **tlsio**适配器提供SDK可以通过标准的安全的TLS通讯方式让设备和IoT Hub交互数据 
 
-Tlsio适配器通过xio接口暴露功能让SDK来调用，这个接口提供一个输入为bits，返回也为bits的接口，具体定义可以访问：https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/xio.h
+Tlsio适配器通过xio接口暴露功能让SDK来调用，这个接口提供一个输入为bits，返回也为bits的接口，具体定义可以访问：./c-utility/inc/azure_c_shared_utility/xio.h
 
 通过调用函数xio_create来创建tlsio适配器实例，在创建tlsio实例的时候，你必须配置参数const void *io_create_parameteres，这个参数是TLSIO_CONFIG的一种类型。
 
@@ -142,24 +142,24 @@ tlsio支持的模式包括两种：直接的，串联的。在直接模式，tls
 串联的tlsio适配器必须调用xio的适配器，这个适配器可以包含一个tcp socket。在百度的IoT SDK里面，xio适配器是通过socketio管理tcp socket。
 
 下面的这个图介绍tls的数据流模型：
-![](https://github.com/baidu/iot-edge-c-sdk/blob/master/pictures/io_chains.png)
+![](./pictures/io_chains.png)
 
 ### tlsio适配器实现
 
 开发tlsio适配器功能相对来说还是很复杂的，需要很有经验的开发人员才能完成，需要对协议有很深的理解。
 tlsio适配器相关的逻辑都是在C公共库实现的，不是百度IoT SDK的一部分。可以参考下面的资料去了解如何开发。
 有两个直接模式tlsio适配器实现：
-tlsio_openssl_conpact for ESP32
+- tlsio_openssl_conpact for ESP32
 https://github.com/Azure/azure-iot-pal-esp32/blob/master/pal/src/tlsio_openssl_compact.c
-tlsio_arduino for Arduino
+- tlsio_arduino for Arduino
 https://github.com/Azure/azure-iot-pal-arduino/blob/master/pal/src/tlsio_arduino.c
 
 tlsio_openssl_compact for ESP32是一个好的例子，如果需要适配的话，可以拷贝一份，基于这个修改来满足自己的需求。
 tlsio_openssl_conpact for ESP32提供类两个文件，这两个文件是和具体平台无关的
-socket_async.c
-https://github.com/Azure/azure-c-shared-utility/blob/master/pal/socket_async.c
-dns_async.c
-https://github.com/Azure/azure-c-shared-utility/blob/master/pal/dns_async.c
+- socket_async.c
+./c-utility/pal/socket_async.c
+- dns_async.c
+./c-utility/pal/dns_async.c
 
 大部分的用户都可以直接使用这两个文件而不需要修改，对于特殊情况只需要修改socket_async_os.h就可以了
 

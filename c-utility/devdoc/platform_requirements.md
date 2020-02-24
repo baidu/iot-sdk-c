@@ -1,57 +1,50 @@
 # platform
 
 
-## Overview
+## 简介
 
-This document specifies the **platform** adapter for the Azure IoT C SDK. The purpose of _platform_ is
-to provide any global init and de-init that may be required, such as `WSAStartup` and `WSACleanup`
-for Windows. It also provides the SDK with the proper TLSIO adapter via `platform_get_default_tlsio`.
+该文档将解释说明Baidu IoT C SDK中的 **platform** 适配器。 _platform_ 适配器的作用就是在SDK启动或者退出的时候，进行平台必要的全局的“初始化”或“反初始化”，比如对于windwos socket编程接口中的`WSAStartup` 和 `WSACleanup`。它也会通过`platform_get_default_tlsio`函数提供合适的TLSIO适配器。
 
-Although the platform adapter provides a mechanism for performing global init and de-init, device
-implementers
-may find it makes more sense to perform these operations outside of the scope of the Azure IoT SDK.
-In that case, the `platform_init` and `platform_deinit` calls may be left empty.
+尽管platform适配器提供了一种全局的初始化，反初始化的机制。但是开发者有时候需要在SDK之外进行初始化，这个时候`platform_init` 和 `platform_deinit`可以什么都不做，设置成空函数即可。
 
-### References 
-[Azure IoT porting guide](https://github.com/Azure/azure-c-shared-utility/blob/master/doc/porting_guide.md)<br/>
-[platform.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/platform.h)<br/>
-[xio.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/xio.h)
+### 引用 
+[Baidu IoT porting guide](../../PortingGuide.md)<br/>
+[platform.h](../../c-utility/inc/azure_c_shared_utility/platform.h)<br/>
+[xio.h](../../c-utility/inc/azure_c_shared_utility/xio.h)
 
 
-###   Exposed API
-The platform adapter must implement 3 of the 4 functions defined in
-[platform.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/platform.h):
-`platform_init`, `platform_deinit`, and `platform_get_default_tlsio`. The fourth function, 
-`platform_get_platform_info`, is not used by the SDK and my be omitted.
+###   暴露的 API
+适配器必须实现[platform.h](../../c-utility/inc/azure_c_shared_utility/platform.h)中的几个接口:
+`platform_init`, `platform_deinit`, 以及 `platform_get_default_tlsio`. 第四个接口`platform_get_platform_info`不被SDK使用到，可以忽略。
 
 ###   platform_init
 
-The `platform_init` call performs any global initialization necessary for a particular platform.
+`platform_init` 可以对于特定的平台进行所需的全局初始化工作。
 
 ```c
 int platform_init();
 ```
 
-**SRS_PLATFORM_30_000: [** The `platform_init` call shall perform any global initialization needed by the platform and return 0 on success. **]**
+**SRS_PLATFORM_30_000: [** `platform_init` 可以对于特定的平台进行所需的全局初始化工作。成功返回0。 **]**
 
-**SRS_PLATFORM_30_001: [** On failure, `platform_init` shall return a non-zero value. **]**
+**SRS_PLATFORM_30_001: [** 失败返回非0值。 **]**
 
 
 ###   platform_deinit
 
-The `platform_deinit` call performs any global initialization necessary for a particular platform.
+`platform_deinit` 可以对于特定的平台进行所需的全局逆初始化工作。
 
 ```c
 void platform_deinit();
 ```
 
-**SRS_PLATFORM_30_010: [** The `platform_deinit` call shall perform any global deinitialization needed by the platform. **]**
+**SRS_PLATFORM_30_010: [** `platform_deinit` 可以对于特定的平台进行所需的全局逆初始化工作。 **]**
 
 
 ###   platform_get_default_tlsio
 
-This call returns the `IO_INTERFACE_DESCRIPTION*` for the platform's tlsio as defined in
-[xio.h](https://github.com/Azure/azure-c-shared-utility/blob/master/inc/azure_c_shared_utility/xio.h).
+该调用返回`IO_INTERFACE_DESCRIPTION*` 类型的tlsio接口，该接口的详细定义在
+[xio.h](../../c-utility/inc/azure_c_shared_utility/xio.h).
 
 
 
@@ -59,4 +52,4 @@ This call returns the `IO_INTERFACE_DESCRIPTION*` for the platform's tlsio as de
 const IO_INTERFACE_DESCRIPTION* platform_get_default_tlsio(void);
 ```
 
-**SRS_PLATFORM_30_020: [** The `platform_get_default_tlsio` call shall return the `IO_INTERFACE_DESCRIPTION*` for the platform's tlsio. **]**
+**SRS_PLATFORM_30_020: [** 该调用返回`IO_INTERFACE_DESCRIPTION*` 类型的tlsio接口。 **]**
