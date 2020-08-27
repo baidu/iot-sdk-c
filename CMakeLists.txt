@@ -17,7 +17,7 @@
 
 
 cmake_minimum_required(VERSION 2.8.11)
-project(iot_edge_c_sdk)
+project(iotcore_c_sdk)
 
 set(IOT_SDK_VERSION 1.1.19)
 
@@ -144,7 +144,7 @@ enable_testing()
 #this project uses several other projects that are build not by these CMakeFiles
 #this project also targets several OSes
 
-include("configs/iot_edge_c_sdkFunctions.cmake")
+include("configs/iotcore_c_sdkFunctions.cmake")
 
 include(CheckSymbolExists)
 function(detect_architecture symbol arch)
@@ -218,7 +218,8 @@ if(NOT ${use_http})
 endif()
 
 add_subdirectory(serializer)
-add_subdirectory(iothub_client)
+#add_subdirectory(iothub_client)
+add_subdirectory(iotcore_client)
 
 #Set CMAKE_INSTALL_LIBDIR if not defined
 include(GNUInstallDirs)
@@ -239,7 +240,7 @@ if(${use_installed_dependencies})
         COPYONLY
     )
 
-    install(EXPORT iot_edge_c_sdkTargets
+    install(EXPORT iotcore_c_sdkTargets
         FILE
             "${PROJECT_NAME}Targets.cmake"
         DESTINATION
