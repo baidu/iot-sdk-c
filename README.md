@@ -205,6 +205,6 @@ git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
 		cmake -DOPENSSL_ROOT_DIR:PATH=/usr/local/opt/openssl -DCMAKE_BUILD_TYPE=Debug .. 
 
 ***
-以上是百度IoTCore SDK的C语言版本介绍，若在其他平台上使用，请参考[如何移植百度天工IOT HUB C语言SDK到其他平台](https://github.com/baidu/iot-sdk-c/blob/master/PortingGuide.md).
+以上是百度IoTCore SDK的C语言版本介绍，若在其他平台上使用，请参考[如何移植百度天工IOT Core C语言SDK到其他平台](https://github.com/baidu/iot-sdk-c/blob/master/PortingGuide.md).
 
 
