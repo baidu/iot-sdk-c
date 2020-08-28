@@ -92,7 +92,7 @@ git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
 
 - 选择你需要clone的tag版本，通过使用下面的命令来clone到本地机器
 
-			git clone -b <yyyy-mm-dd> --recursive https://github.com/baidu/iot-edge-c-sdk.git 
+			git clone -b <yyyy-mm-dd> --recursive https://github.com/baidu/iot-sdk-c.git
 
 	通过传递参数—recursive告诉git来clone git项目依赖的所有SDK。你可以从这里找到所有的依赖
 
@@ -154,7 +154,7 @@ git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
 
 - 下面的命令是使用tag名字复制最新发布版本SDK到你的本地机器
 
-		git clone -b <yyyy-mm-dd> --recursive https://github.com/baidu /iot-edge-c-sdk.git 
+		git clone -b <yyyy-mm-dd> --recursive https://github.com/baidu/iot-sdk-c.git
 
 	参数—recursive是告诉git复制github的repos依赖的所有git库。所有的依赖列举在here.
 
@@ -189,7 +189,7 @@ git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
 	目前我们发布版本tag的格式是时间值，例如yyyy-mm-dd格式
 
 - 下面的命令是使用tag名字复制最新发布版本SDK到你的本地机器
-		git clone -b <yyyy-mm-dd> --recursive https://github.com/baidu/iot-edge-c-sdk.git 
+		git clone -b <yyyy-mm-dd> --recursive https://github.com/baidu/iot-sdk-c.git
 
 	参数—recursive是告诉git复制github的repos依赖的所有git库。所有的依赖列举在here.
 
@@ -206,5 +206,3 @@ git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
 
 ***
 以上是百度IoTCore SDK的C语言版本介绍，若在其他平台上使用，请参考[如何移植百度天工IOT Core C语言SDK到其他平台](https://github.com/baidu/iot-sdk-c/blob/master/PortingGuide.md).
-
-
