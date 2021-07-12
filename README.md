@@ -86,16 +86,6 @@ git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
 
 	CMake官方下载地址：https://cmake.org/download
 
-- 确认最新发布SDK版本的tag
-
-	目前发布版本的tag命名方式是yyyy-mm-dd
-
-- 选择你需要clone的tag版本，通过使用下面的命令来clone到本地机器
-
-			git clone -b <yyyy-mm-dd> --recursive https://github.com/baidu/iot-sdk-c.git
-
-	通过传递参数—recursive告诉git来clone git项目依赖的所有SDK。你可以从这里找到所有的依赖
-
 - 编译C语言SDK
 
 如果你想在本地编译开发和测试SDK的话，可以通过执行下面的步骤来生成项目文件:
@@ -147,17 +137,6 @@ git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
 
 - 关于如何在ubuntu 14.04上将gcc升级的信息可以阅读 [How do I use the latest GCC 4.9 on Ubuntu 14.04](http://askubuntu.com/questions/466651/how-do-i-use-the-latest-gcc-4-9-on-ubuntu-14-04 ).
 
-
-- 定位最新发布SDK版本的tag
-
-	目前我们发布版本tag的格式是时间值，例如yyyy-mm-dd格式
-
-- 下面的命令是使用tag名字复制最新发布版本SDK到你的本地机器
-
-		git clone -b <yyyy-mm-dd> --recursive https://github.com/baidu/iot-sdk-c.git
-
-	参数—recursive是告诉git复制github的repos依赖的所有git库。所有的依赖列举在here.
-
 - 编译C版本的SDK
 
 	执行下面命令编译SDK：
@@ -183,15 +162,6 @@ git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
 - 验证CMake是不是允许最低版本2.8.12
 
 		cmake --version 
-
-- 定位最新发布SDK版本的tag
-
-	目前我们发布版本tag的格式是时间值，例如yyyy-mm-dd格式
-
-- 下面的命令是使用tag名字复制最新发布版本SDK到你的本地机器
-		git clone -b <yyyy-mm-dd> --recursive https://github.com/baidu/iot-sdk-c.git
-
-	参数—recursive是告诉git复制github的repos依赖的所有git库。所有的依赖列举在here.
 
 - 编译C语言SDK
 
