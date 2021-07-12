@@ -41,7 +41,7 @@
 
 - /certs
 
-	包含与物接入进行通信所需的证书。
+	包含与 IoT Core 进行通信所需的证书。
 
 - /build_all
 
@@ -53,7 +53,7 @@
 
 - /serializer
 
-	包含在原始消息库之上提供存储和JSON序列化功能的库。这些库便于上传结构化数据以及用于物接入服务的命令和控制。
+	包含在原始消息库之上提供存储和JSON序列化功能的库。这些库便于上传结构化数据以及用于 IoT Core 服务的命令和控制。
 
 
 
@@ -85,16 +85,6 @@ git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
 	确认CMake在你的PATH环境变量目录列表，你可以使用cmake –version来测试安装是否正常并且检测版本。可以使用CMake来创建Visual Studio的项目，还可以编译libraries和样例。
 
 	CMake官方下载地址：https://cmake.org/download
-
-- 确认最新发布SDK版本的tag
-
-	目前发布版本的tag命名方式是yyyy-mm-dd
-
-- 选择你需要clone的tag版本，通过使用下面的命令来clone到本地机器
-
-			git clone -b <yyyy-mm-dd> --recursive https://github.com/baidu/iot-edge-c-sdk.git 
-
-	通过传递参数—recursive告诉git来clone git项目依赖的所有SDK。你可以从这里找到所有的依赖
 
 - 编译C语言SDK
 
@@ -148,16 +138,6 @@ git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
 - 关于如何在ubuntu 14.04上将gcc升级的信息可以阅读 [How do I use the latest GCC 4.9 on Ubuntu 14.04](http://askubuntu.com/questions/466651/how-do-i-use-the-latest-gcc-4-9-on-ubuntu-14-04 ).
 
 
-- 定位最新发布SDK版本的tag
-
-	目前我们发布版本tag的格式是时间值，例如yyyy-mm-dd格式
-
-- 下面的命令是使用tag名字复制最新发布版本SDK到你的本地机器
-
-		git clone -b <yyyy-mm-dd> --recursive https://github.com/baidu /iot-edge-c-sdk.git 
-
-	参数—recursive是告诉git复制github的repos依赖的所有git库。所有的依赖列举在here.
-
 - 编译C版本的SDK
 
 	执行下面命令编译SDK：
@@ -184,15 +164,6 @@ git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
 
 		cmake --version 
 
-- 定位最新发布SDK版本的tag
-
-	目前我们发布版本tag的格式是时间值，例如yyyy-mm-dd格式
-
-- 下面的命令是使用tag名字复制最新发布版本SDK到你的本地机器
-		git clone -b <yyyy-mm-dd> --recursive https://github.com/baidu/iot-edge-c-sdk.git 
-
-	参数—recursive是告诉git复制github的repos依赖的所有git库。所有的依赖列举在here.
-
 - 编译C语言SDK
 
 		mkdir build
@@ -205,6 +176,4 @@ git clone https://github.com/openssl/openssl.git -b OpenSSL_1_0_2-stable
 		cmake -DOPENSSL_ROOT_DIR:PATH=/usr/local/opt/openssl -DCMAKE_BUILD_TYPE=Debug .. 
 
 ***
-以上是百度IoTCore SDK的C语言版本介绍，若在其他平台上使用，请参考[如何移植百度天工IOT HUB C语言SDK到其他平台](https://github.com/baidu/iot-sdk-c/blob/master/PortingGuide.md).
-
-
+以上是百度IoTCore SDK的C语言版本介绍，若在其他平台上使用，请参考[如何移植百度天工IOT Core C语言SDK到其他平台](https://github.com/baidu/iot-sdk-c/blob/master/PortingGuide.md).
